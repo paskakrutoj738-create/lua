@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#090b14">
+<title>LUAVERSE — Fly Script</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono&display=swap" rel="stylesheet">
+
+<style>
+:root{
+  --bg:#090b14;
+  --panel:rgba(18,21,38,.78);
+  --line:rgba(160,175,255,.16);
+  --text:#f2f4ff;
+  --muted:#9aa3c7;
+  --violet:#8b5cf6;
+  --cyan:#22d3ee;
+  --pink:#f472b6;
+  --green:#34d399;
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;scroll-padding-top:90px}
+body{
+  font-family:Inter,sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  min-height:100vh;
+  overflow-x:hidden;
+}
+
+::selection{background:rgba(139,92,246,.5)}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-track{background:#0d1020}
+::-webkit-scrollbar-thumb{
+  background:linear-gradient(var(--violet),var(--cyan));
+  border-radius:10px;border:2px solid #0d1020;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--violet) #0d1020}
+
+#particles{position:fixed;inset:0;z-index:0;pointer-events:none}
+.glow{
+  position:fixed;width:60vw;height:60vw;border-radius:50%;
+  filter:blur(120px);opacity:.22;z-index:0;pointer-events:none;
+}
+.glow.a{background:var(--violet);top:-25vw;left:-20vw}
+.glow.b{background:var(--cyan);bottom:-30vw;right:-20vw}
+
+nav{
+  position:fixed;top:0;left:0;right:0;z-index:50;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:16px clamp(18px,5vw,60px);
+  background:rgba(9,11,20,.7);
+  backdrop-filter:blur(18px);
+  border-bottom:1px solid var(--line);
+}
+.logo{
+  font-family:Unbounded,sans-serif;font-weight:800;
+  color:var(--text);text-decoration:none;font-size:18px;
+}
+.logo span{
+  background:linear-gradient(90deg,var(--violet),var(--cyan));
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+}
+.status{
+  display:flex;align-items:center;gap:8px;
+  color:var(--green);font-size:13px;font-weight:600;
+}
+.dot{
+  width:8px;height:8px;border-radius:50%;
+  background:var(--green);box-shadow:0 0 12px var(--green);
+  animation:pulse 2s infinite;
+}
+@keyframes pulse{50%{opacity:.4}}
+
+main{position:relative;z-index:2;max-width:1050px;margin:auto;padding:0 20px}
+
+.hero{text-align:center;padding:150px 0 65px}
+.tag{
+  display:inline-block;padding:8px 16px;border-radius:99px;
+  border:1px solid rgba(34,211,238,.3);
+  background:rgba(34,211,238,.07);
+  color:var(--cyan);font-size:13px;font-weight:600;margin-bottom:25px;
+}
+h1{
+  font-family:Unbounded,sans-serif;
+  font-size:clamp(30px,6vw,58px);
+  line-height:1.15;margin-bottom:20px;
+}
+.grad{
+  background:linear-gradient(100deg,var(--violet),var(--pink),var(--cyan));
+  background-size:200% auto;
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  animation:shine 6s linear infinite;
+}
+@keyframes shine{to{background-position:200% center}}
+.sub{color:var(--muted);line-height:1.7;font-size:17px}
+.sub b{color:var(--text)}
+
+.actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:30px}
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  padding:14px 24px;border-radius:12px;text-decoration:none;
+  font-weight:700;font-size:14px;border:none;cursor:pointer;
+  transition:.25s;font-family:inherit;
+}
+.primary{
+  color:white;background:linear-gradient(120deg,var(--violet),#a855f7);
+  box-shadow:0 6px 30px rgba(139,92,246,.4);
+}
+.primary:hover{transform:translateY(-3px);box-shadow:0 10px 40px rgba(139,92,246,.6)}
+.ghost{
+  color:var(--text);background:rgba(255,255,255,.04);
+  border:1px solid var(--line);
+}
+.ghost:hover{border-color:var(--cyan);color:var(--cyan)}
+
+section{padding:45px 0}
+.head{text-align:center;margin-bottom:35px}
+.head small{
+  font-family:"JetBrains Mono",monospace;
+  color:var(--cyan);letter-spacing:2px;display:block;margin-bottom:12px;
+}
+.head h2{font-family:Unbounded,sans-serif;font-size:clamp(22px,4vw,32px)}
+.head p{color:var(--muted);margin-top:10px}
+
+.card{
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:22px;padding:clamp(20px,4vw,35px);
+  backdrop-filter:blur(16px);
+  box-shadow:0 20px 70px rgba(0,0,0,.35);
+}
+.card-top{display:flex;align-items:center;gap:14px;margin-bottom:22px}
+.icon{
+  width:52px;height:52px;display:grid;place-items:center;
+  font-size:26px;border-radius:15px;
+  background:rgba(139,92,246,.15);border:1px solid rgba(139,92,246,.35);
+}
+.card-top h3{font-family:Unbounded,sans-serif;font-size:18px}
+.card-top p{color:var(--muted);font-size:13px;margin-top:4px}
+.version{
+  margin-left:auto;padding:5px 12px;border-radius:99px;
+  background:rgba(139,92,246,.18);color:#c4b5fd;
+  border:1px solid rgba(139,92,246,.4);font-size:12px;font-weight:700;
+}
+
+.features{list-style:none;display:grid;gap:10px;margin-bottom:25px}
+.features li{color:#cbd2ef;font-size:14px}
+.features span{color:var(--green);font-weight:700;margin-right:8px}
+
+.code{
+  background:#050711;border:1px solid var(--line);
+  border-radius:14px;overflow:hidden;
+}
+.code-bar{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:10px 14px;border-bottom:1px solid var(--line);
+  background:rgba(255,255,255,.025);
+}
+.code-bar span{font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--muted)}
+.copy{
+  background:linear-gradient(120deg,var(--violet),#9333ea);
+  color:white;border:none;padding:8px 16px;border-radius:8px;
+  font-weight:700;font-size:12px;cursor:pointer;transition:.2s;
+}
+.copy:hover{transform:scale(1.05)}
+.copy.ok{background:linear-gradient(120deg,#059669,var(--green))}
+pre{
+  padding:18px;overflow:auto;
+  font-family:"JetBrains Mono",monospace;
+  font-size:12px;line-height:1.7;color:#7ee7fc;
+  white-space:pre-wrap;word-break:break-all;
+}
+
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}
+.chip{
+  font-size:12px;font-weight:600;padding:5px 12px;border-radius:99px;
+  border:1px solid rgba(34,211,238,.3);color:var(--cyan);
+  background:rgba(34,211,238,.06);
+}
+.chip.p{color:#c4b5fd;border-color:rgba(139,92,246,.4);background:rgba(139,92,246,.08)}
+.chip.g{color:var(--green);border-color:rgba(52,211,153,.3);background:rgba(52,211,153,.06)}
+
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}
+.step{
+  background:var(--panel);border:1px solid var(--line);
+  border-radius:18px;padding:25px;
+}
+.num{
+  font-family:Unbounded,sans-serif;font-size:28px;font-weight:800;
+  background:linear-gradient(120deg,var(--violet),var(--cyan));
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  margin-bottom:12px;
+}
+.step h3{font-size:16px;margin-bottom:8px}
+.step p{color:var(--muted);font-size:14px;line-height:1.6}
+
+details{
+  background:var(--panel);border:1px solid var(--line);
+  border-radius:14px;margin-bottom:10px;overflow:hidden;
+}
+summary{
+  cursor:pointer;padding:16px 20px;font-weight:600;font-size:14px;
+  list-style:none;display:flex;justify-content:space-between;
+}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"+";color:var(--cyan);font-size:20px}
+details[open] summary::after{transform:rotate(45deg)}
+details p{padding:0 20px 16px;color:var(--muted);font-size:14px;line-height:1.7}
+
+footer{
+  text-align:center;padding:40px 20px;color:var(--muted);font-size:13px;
+  border-top:1px solid var(--line);margin-top:30px;
+}
+footer b{color:var(--pink)}
+
+.toast{
+  position:fixed;bottom:25px;left:50%;z-index:100;
+  transform:translate(-50%,100px);opacity:0;
+  background:rgba(10,15,30,.95);backdrop-filter:blur(14px);
+  border:1px solid rgba(52,211,153,.5);color:var(--green);
+  padding:14px 24px;border-radius:14px;font-weight:700;font-size:14px;
+  transition:.35s;pointer-events:none;white-space:nowrap;
+}
+.toast.show{transform:translate(-50%,0);opacity:1}
+
+.reveal{opacity:0;transform:translateY(25px);transition:.7s}
+.reveal.visible{opacity:1;transform:none}
+
+@media(max-width:600px){
+  .hero{padding-top:120px}
+  .status{display:none}
+  .toast{font-size:12px;padding:12px 16px;white-space:normal;text-align:center;width:90%}
+}
+@media(prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important}
+  .reveal{opacity:1;transform:none}
+}
+</style>
+</head>
+
+<body>
+<canvas id="particles"></canvas>
+<div class="glow a"></div>
+<div class="glow b"></div>
+
+<nav>
+  <a class="logo" href="#top">⚡ LUA<span>VERSE</span></a>
+  <div class="status"><span class="dot"></span>Online</div>
+</nav>
+
+<main id="top">
+
+<header class="hero">
+  <div class="tag reveal">✈️ Universal Fly · Mobile & PC</div>
+  <h1 class="reveal">Летай так,<br><span class="grad">как играешь</span></h1>
+  <p class="sub reveal">Полёт через <b>родной джойстик Roblox</b>.<br>Наклон камеры — вверх и вниз. Без лишних кнопок.</p>
+  <div class="actions reveal">
+    <a href="#script" class="btn primary">📋 Получить скрипт</a>
+    <a href="#how" class="btn ghost">Как запустить →</a>
+  </div>
+</header>
+
+<section id="script">
+  <div class="head reveal">
+    <small>// LOADSTRING</small>
+    <h2>Universal <span class="grad">Fly</span></h2>
+    <p>Скопируй код и вставь в Delta → Execute</p>
+  </div>
+
+  <article class="card reveal">
+    <div class="card-top">
+      <div class="icon">✈️</div>
+      <div>
+        <h3>Fly Script</h3>
+        <p>Джойстик + наклон камеры</p>
+      </div>
+      <span class="version">v1.2</span>
+    </div>
+
+    <ul class="features">
+      <li><span>✓</span> Стандартный джойстик Roblox — движение куда идёт игрок</li>
+      <li><span>✓</span> Камера вверх / вниз = подъём / спуск</li>
+      <li><span>✓</span> Авто-восстановление после респавна</li>
+      <li><span>✓</span> Одна кнопка FLY ON / OFF</li>
+    </ul>
+
+    <div class="code">
+      <div class="code-bar">
+        <span>● ● ● fly.lua</span>
+        <button class="copy" data-copy="loader">📋 Copy</button>
+      </div>
+      <pre><code id="loader">local url = "https://paskakrutoj738-create.github.io/lua/"
+local html = game:HttpGet(url)
+local code = html:match("&lt;!%-%-FLY%-START%-%-&gt;(.-)&lt;!%-%-FLY%-END%-%-&gt;")
+assert(code, "Fly script not found")
+loadstring(code)()</code></pre>
+    </div>
+
+    <div class="chips">
+      <span class="chip">Mobile</span>
+      <span class="chip p">PC</span>
+      <span class="chip g">Auto Respawn</span>
+    </div>
+
+    <div style="margin-top:25px">
+      <div class="code-bar" style="border:1px solid var(--line);border-radius:12px 12px 0 0">
+        <span>Исходник Roblox (уже внутри этого файла)</span>
+        <button class="copy" data-copy="fly-source">📋 Copy Lua</button>
+      </div>
+      <pre style="border:1px solid var(--line);border-top:0;border-radius:0 0 12px 12px;max-height:350px"><code id="fly-source"></code></pre>
+    </div>
+  </article>
+</section>
+
+<section id="how">
+  <div class="head reveal">
+    <small>// QUICK START</small>
+    <h2>Запуск за <span class="grad">30 секунд</span></h2>
+  </div>
+  <div class="steps">
+    <div class="step reveal"><div class="num">01</div><h3>Скопируй</h3><p>Нажми <b>Copy</b> возле loadstring.</p></div>
+    <div class="step reveal"><div class="num">02</div><h3>Вставь</h3><p>Открой <b>Delta</b>, зайди в игру и вставь код.</p></div>
+    <div class="step reveal"><div class="num">03</div><h3>Execute</h3><p>Нажми Execute → появится кнопка <b>FLY</b>.</p></div>
+  </div>
+</section>
+
+<section id="faq">
+  <div class="head reveal">
+    <small>// FAQ</small>
+    <h2>Частые вопросы</h2>
+  </div>
+  <details class="reveal"><summary>Как лететь вверх и вниз?</summary><p>Свайпни по правой части экрана, чтобы наклонить камеру. Камера вверх — персонаж летит вверх, камера вниз — вниз.</p></details>
+  <details class="reveal"><summary>Нужен отдельный файл fly.lua?</summary><p>Нет. Весь Lua-код находится внутри этого index.html между специальными метками. Loadstring скачивает страницу и запускает код оттуда.</p></details>
+  <details class="reveal"><summary>Работает ли на ПК?</summary><p>Да. WASD задаёт направление движения, а наклон камеры управляет высотой.</p></details>
+  <details class="reveal"><summary>Это безопасно?</summary><p>Любые сторонние скрипты могут привести к бану. Используй только там, где это разрешено, и на свой риск.</p></details>
+</section>
+
+<footer>
+  ⚡ LUAVERSE · сделано с <b>♥</b><br>
+  <span style="font-size:12px;opacity:.7">Используй скрипты только там, где это разрешено.</span>
+</footer>
+
+</main>
+
+<div class="toast" id="toast">✅ Скопировано!</div>
+
+<!-- Сам скрипт Roblox. Loadstring выше читает его прямо из этой страницы. -->
+<script type="text/plain" id="roblox-fly">
+<!--FLY-START-->
+local SPEED = 50
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local player = Players.LocalPlayer
+
+local flying = false
+local bv, bg, conn
+local gui, btn
+
+local function getChar()
+    local c = player.Character or player.CharacterAdded:Wait()
+    return c, c:WaitForChild("Humanoid"), c:WaitForChild("HumanoidRootPart")
+end
+
+local function stop()
+    flying = false
+    if conn then conn:Disconnect() conn = nil end
+    if bv then bv:Destroy() bv = nil end
+    if bg then bg:Destroy() bg = nil end
+    local c = player.Character
+    local h = c and c:FindFirstChildOfClass("Humanoid")
+    if h then h.PlatformStand = false end
+    if btn then
+        btn.Text = "FLY: OFF"
+        btn.BackgroundColor3 = Color3.fromRGB(60,60,75)
+    end
+end
+
+local function start()
+    local char, hum, root = getChar()
+    stop()
+
+    bv = Instance.new("BodyVelocity")
+    bv.MaxForce = Vector3.new(1e5,1e5,1e5)
+    bv.Velocity = Vector3.zero
+    bv.Parent = root
+
+    bg = Instance.new("BodyGyro")
+    bg.MaxTorque = Vector3.new(1e5,1e5,1e5)
+    bg.P = 9000
+    bg.CFrame = root.CFrame
+    bg.Parent = root
+
+    hum.PlatformStand = true
+    flying = true
+
+    if btn then
+        btn.Text = "FLY: ON"
+        btn.BackgroundColor3 = Color3.fromRGB(0,160,90)
+    end
+
+    conn = RunService.RenderStepped:Connect(function()
+        if not flying or not bv or not bv.Parent then return end
+        local cam = workspace.CurrentCamera
+        if not cam then return end
+
+        local move = hum.MoveDirection
+        local look = cam.CFrame.LookVector
+        local right = cam.CFrame.RightVector
+
+        local flatLook = Vector3.new(look.X,0,look.Z)
+        local flatRight = Vector3.new(right.X,0,right.Z)
+        if flatLook.Magnitude > 0 then flatLook = flatLook.Unit end
+        if flatRight.Magnitude > 0 then flatRight = flatRight.Unit end
+
+        local fwd = move:Dot(flatLook)
+        local side = move:Dot(flatRight)
+
+        local vel = (flatLook*fwd + flatRight*side) * SPEED
+        vel = vel + Vector3.new(0, look.Y*SPEED, 0)
+        bv.Velocity = vel
+
+        bg.CFrame = CFrame.lookAt(root.Position, root.Position + Vector3.new(look.X,0,look.Z))
+    end)
+end
+
+-- GUI
+if player.PlayerGui:FindFirstChild("LUAVERSE_Fly") then
+    player.PlayerGui.LUAVERSE_Fly:Destroy()
+end
+
+gui = Instance.new("ScreenGui")
+gui.Name = "LUAVERSE_Fly"
+gui.ResetOnSpawn = false
+gui.Parent = player.PlayerGui
+
+btn = Instance.new("TextButton")
+btn.Size = UDim2.new(0,130,0,48)
+btn.Position = UDim2.new(0,12,1,-65)
+btn.BackgroundColor3 = Color3.fromRGB(60,60,75)
+btn.TextColor3 = Color3.new(1,1,1)
+btn.Text = "FLY: OFF"
+btn.Font = Enum.Font.GothamBold
+btn.TextSize = 16
+btn.Parent = gui
+Instance.new("UICorner", btn).CornerRadius = UDim.new(0,12)
+
+btn.MouseButton1Click:Connect(function()
+    if flying then stop() else start() end
+end)
+
+player.CharacterAdded:Connect(function()
+    task.wait(1)
+    if flying then start() end
+end)
+
+print("LUAVERSE Fly loaded")
+<!--FLY-END-->
+</script>
+
+<script>
+(() => {
+"use strict";
+
+// Показать исходник на сайте
+const sourceEl = document.getElementById("roblox-fly");
+const rawSource = sourceEl.textContent.trim();
+document.getElementById("fly-source").textContent = rawSource;
+
+// Копирование
+const toast = document.getElementById("toast");
+let timer;
+
+function showToast(text){
+  toast.textContent = text;
+  toast.classList.add("show");
+  clearTimeout(timer);
+  timer = setTimeout(() => toast.classList.remove("show"), 2200);
+}
+
+async function copy(text){
+  try{
+    await navigator.clipboard.writeText(text);
+    return true;
+  }catch(e){
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand("copy");
+    ta.remove();
+    return ok;
+  }
+}
+
+document.querySelectorAll("[data-copy]").forEach(button => {
+  button.addEventListener("click", async () => {
+    const target = document.getElementById(button.dataset.copy);
+    const ok = await copy(target.textContent.trim());
+    if(ok){
+      button.textContent = "✅ Copied!";
+      button.classList.add("ok");
+      showToast("✅ Скопировано! Вставь в Delta и нажми Execute");
+      setTimeout(() => {
+        button.textContent = button.dataset.copy === "fly-source" ? "📋 Copy Lua" : "📋 Copy";
+        button.classList.remove("ok");
+      }, 2000);
+    }else{
+      showToast("⚠️ Выдели код и скопируй вручную");
+    }
+  });
+});
+
+// Анимация появления
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(entry => {
+    if(entry.isIntersecting){
+      entry.target.classList.add("visible");
+      observer.unobserve(entry.target);
+    }
+  });
+},{threshold:.1});
+document.querySelectorAll(".reveal").forEach(el => observer.observe(el));
+
+// Частицы
+const canvas = document.getElementById("particles");
+const ctx = canvas.getContext("2d");
+const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+let w,h,parts=[];
+const colors = ["139,92,246","34,211,238","244,114,182","255,255,255"];
+
+function resize(){
+  const dpr = Math.min(devicePixelRatio || 1, 2);
+  w = innerWidth; h = innerHeight;
+  canvas.width = w*dpr;
+  canvas.height = h*dpr;
+  canvas.style.width = w+"px";
+  canvas.style.height = h+"px";
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  const count = Math.max(30,Math.min(85,Math.floor(w*h/18000)));
+  parts = Array.from({length:count},() => ({
+    x:Math.random()*w,
+    y:Math.random()*h,
+    vx:(Math.random()-.5)*.35,
+    vy:(Math.random()-.5)*.35,
+    r:Math.random()*1.6+.5,
+    c:colors[Math.floor(Math.random()*colors.length)],
+    t:Math.random()*6.28
+  }));
+}
+
+function draw(){
+  ctx.clearRect(0,0,w,h);
+
+  for(const p of parts){
+    p.x += p.vx; p.y += p.vy; p.t += .02;
+    if(p.x < -10) p.x = w+10;
+    if(p.x > w+10) p.x = -10;
+    if(p.y < -10) p.y = h+10;
+    if(p.y > h+10) p.y = -10;
+
+    const alpha = .3 + .4*(.5+.5*Math.sin(p.t));
+    ctx.fillStyle = `rgba(${p.c},${alpha})`;
+    ctx.beginPath();
+    ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+    ctx.fill();
+  }
+
+  ctx.lineWidth = .5;
+  for(let i=0;i<parts.length;i++){
+    for(let j=i+1;j<parts.length;j++){
+      const a=parts[i],b=parts[j];
+      const dx=a.x-b.x,dy=a.y-b.y;
+      const d=Math.sqrt(dx*dx+dy*dy);
+      if(d<120){
+        ctx.strokeStyle = `rgba(150,165,255,${(1-d/120)*.12})`;
+        ctx.beginPath();
+        ctx.moveTo(a.x,a.y);
+        ctx.lineTo(b.x,b.y);
+        ctx.stroke();
+      }
+    }
+  }
+
+  if(!reduced) requestAnimationFrame(draw);
+}
+
+addEventListener("resize",resize,{passive:true});
+resize();
+draw();
+
+})();
+</script>
+</body>
+  </html>
