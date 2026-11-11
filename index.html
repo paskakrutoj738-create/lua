@@ -1,309 +1,744 @@
--- === ДОПОЛНИТЕЛЬНЫЕ НАСТРОЙКИ MM2 ===
+--============================================
+--  ⚡ LUAVERSE HUB | MM2
+--  Fly · ESP · Roles · Kill All · Auto Gun · Speed
+--============================================
 
-Settings.KillAll = false
-Settings.PreRoles = false
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local roleObjects = {}
-local killConnection = nil
-local roleConnection = nil
+local LP = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
 
-local ROLE_COLORS = {
-    Murderer = Color3.fromRGB(255, 60, 80),
-    Sheriff = Color3.fromRGB(60, 150, 255),
-    Hero = Color3.fromRGB(255, 210, 60),
-    Innocent = Color3.fromRGB(70, 220, 130)
+--== НАСТРОЙКИ ==--
+local S = {
+	Fly = false, FlySpeed = 60,
+	ESP = false, Roles = false,
+	KillAll = false, AutoGun = false,
+	Speed = false, WalkSpeed = 32,
 }
 
+--== ПАЛИТРА ==--
+local C = {
+	bg      = Color3.fromRGB(14, 16, 28),
+	panel   = Color3.fromRGB(20, 23, 38),
+	card    = Color3.fromRGB(27, 31, 50),
+	stroke  = Color3.fromRGB(58, 64, 96),
+	text    = Color3.fromRGB(238, 241, 255),
+	muted   = Color3.fromRGB(140, 148, 180),
+	violet  = Color3.fromRGB(139, 92, 246),
+	cyan    = Color3.fromRGB(34, 211, 238),
+	green   = Color3.fromRGB(52, 211, 153),
+	red     = Color3.fromRGB(251, 80, 110),
+	amber   = Color3.fromRGB(251, 191, 36),
+}
 
--- === ПОЛУЧЕНИЕ РОЛЕЙ ИЗ ДАННЫХ ИГРЫ ===
-
-local function getRoleData()
-    -- В разных версиях MM2 структура данных может отличаться.
-    local candidates = {}
-
-    local replicatedStorage = game:GetService("ReplicatedStorage")
-
-    local remotes = replicatedStorage:FindFirstChild("Remotes")
-    if remotes then
-        local gameplay = remotes:FindFirstChild("Gameplay")
-        if gameplay then
-            local data = gameplay:FindFirstChild("PlayerData")
-            if data then
-                table.insert(candidates, data)
-            end
-        end
-    end
-
-    local direct = replicatedStorage:FindFirstChild("PlayerData")
-    if direct then
-        table.insert(candidates, direct)
-    end
-
-    for _, container in ipairs(candidates) do
-        local result = {}
-
-        for _, player in ipairs(Players:GetPlayers()) do
-            local item = container:FindFirstChild(player.Name)
-
-            if item then
-                local roleValue = item:FindFirstChild("Role")
-
-                if roleValue and typeof(roleValue.Value) == "string" then
-                    result[player] = roleValue.Value
-                end
-            end
-        end
-
-        if next(result) then
-            return result
-        end
-    end
-
-    return nil
+local function new(class, props, parent)
+	local o = Instance.new(class)
+	for k, v in pairs(props) do o[k] = v end
+	if parent then o.Parent = parent end
+	return o
 end
 
-
--- === РОЛИ ДО ВЫДАЧИ ОРУЖИЯ ===
-
-local function clearRoleESP()
-    for _, object in pairs(roleObjects) do
-        if object then
-            object:Destroy()
-        end
-    end
-
-    roleObjects = {}
+local function corner(o, r) return new("UICorner", {CornerRadius = UDim.new(0, r or 10)}, o) end
+local function stroke(o, col, t)
+	return new("UIStroke", {Color = col or C.stroke, Thickness = t or 1, Transparency = 0.4}, o)
+end
+local function tween(o, t, props)
+	TweenService:Create(o, TweenInfo.new(t, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), props):Play()
 end
 
+--== ОЧИСТКА СТАРОГО GUI ==--
+local old = LP.PlayerGui:FindFirstChild("LUAVERSE_HUB")
+if old then old:Destroy() end
 
-local function updatePreRoles()
-    if not Settings.PreRoles then
-        clearRoleESP()
-        return
-    end
+local Gui = new("ScreenGui", {
+	Name = "LUAVERSE_HUB",
+	ResetOnSpawn = false,
+	ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+	DisplayOrder = 999,
+}, LP.PlayerGui)
 
-    local roles = getRoleData()
+--== ГЛАВНОЕ ОКНО ==--
+local Main = new("Frame", {
+	Size = UDim2.new(0, 330, 0, 430),
+	Position = UDim2.new(0.5, -165, 0.5, -215),
+	BackgroundColor3 = C.bg,
+	BorderSizePixel = 0,
+	ClipsDescendants = true,
+	Active = true,
+}, Gui)
+corner(Main, 16)
+stroke(Main, C.violet, 1.5)
 
-    if not roles then
-        return
-    end
+new("UIGradient", {
+	Color = ColorSequence.new{
+		ColorSequenceKeypoint.new(0, Color3.fromRGB(24, 20, 45)),
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(12, 14, 26)),
+	},
+	Rotation = 90,
+}, Main)
 
-    for player, role in pairs(roles) do
-        if player ~= LocalPlayer and player.Character then
-            local head = player.Character:FindFirstChild("Head")
+--== ШАПКА ==--
+local Header = new("Frame", {
+	Size = UDim2.new(1, 0, 0, 52),
+	BackgroundColor3 = C.panel,
+	BorderSizePixel = 0,
+}, Main)
+corner(Header, 16)
+new("Frame", {
+	Size = UDim2.new(1, 0, 0, 16),
+	Position = UDim2.new(0, 0, 1, -16),
+	BackgroundColor3 = C.panel,
+	BorderSizePixel = 0,
+}, Header)
 
-            if head then
-                local label = roleObjects[player]
+new("TextLabel", {
+	Size = UDim2.new(0, 200, 1, 0),
+	Position = UDim2.new(0, 16, 0, 0),
+	BackgroundTransparency = 1,
+	Text = "⚡ LUAVERSE",
+	TextColor3 = C.text,
+	Font = Enum.Font.GothamBlack,
+	TextSize = 18,
+	TextXAlignment = Enum.TextXAlignment.Left,
+}, Header)
 
-                if not label or not label.Parent then
-                    label = Instance.new("BillboardGui")
-                    label.Name = "LUAVERSE_Role"
-                    label.Size = UDim2.new(0, 150, 0, 35)
-                    label.StudsOffset = Vector3.new(0, 3, 0)
-                    label.AlwaysOnTop = true
-                    label.Adornee = head
-                    label.Parent = head
+new("TextLabel", {
+	Size = UDim2.new(0, 60, 0, 16),
+	Position = UDim2.new(0, 132, 0, 19),
+	BackgroundTransparency = 1,
+	Text = "MM2",
+	TextColor3 = C.cyan,
+	Font = Enum.Font.GothamBold,
+	TextSize = 12,
+	TextXAlignment = Enum.TextXAlignment.Left,
+}, Header)
 
-                    local text = Instance.new("TextLabel")
-                    text.Name = "RoleText"
-                    text.Size = UDim2.new(1, 0, 1, 0)
-                    text.BackgroundTransparency = 1
-                    text.Font = Enum.Font.GothamBold
-                    text.TextSize = 15
-                    text.TextStrokeTransparency = 0
-                    text.TextStrokeColor3 = Color3.new(0, 0, 0)
-                    text.Parent = label
+local MinBtn = new("TextButton", {
+	Size = UDim2.new(0, 28, 0, 28),
+	Position = UDim2.new(1, -66, 0, 12),
+	BackgroundColor3 = C.card,
+	Text = "–",
+	TextColor3 = C.muted,
+	Font = Enum.Font.GothamBold,
+	TextSize = 20,
+	AutoButtonColor = false,
+}, Header)
+corner(MinBtn, 8)
 
-                    roleObjects[player] = label
-                end
+local CloseBtn = new("TextButton", {
+	Size = UDim2.new(0, 28, 0, 28),
+	Position = UDim2.new(1, -34, 0, 12),
+	BackgroundColor3 = Color3.fromRGB(60, 26, 38),
+	Text = "✕",
+	TextColor3 = C.red,
+	Font = Enum.Font.GothamBold,
+	TextSize = 13,
+	AutoButtonColor = false,
+}, Header)
+corner(CloseBtn, 8)
 
-                local text = label:FindFirstChild("RoleText")
-
-                if text then
-                    text.Text = role
-                    text.TextColor3 = ROLE_COLORS[role]
-                        or Color3.fromRGB(255, 255, 255)
-                end
-            end
-        end
-    end
+--== ПЕРЕТАСКИВАНИЕ (тач + мышь) ==--
+do
+	local dragging, dragStart, startPos = false, nil, nil
+	Header.InputBegan:Connect(function(i)
+		if i.UserInputType == Enum.UserInputType.Touch or i.UserInputType == Enum.UserInputType.MouseButton1 then
+			dragging, dragStart, startPos = true, i.Position, Main.Position
+		end
+	end)
+	UserInputService.InputChanged:Connect(function(i)
+		if dragging and (i.UserInputType == Enum.UserInputType.Touch or i.UserInputType == Enum.UserInputType.MouseMovement) then
+			local d = i.Position - dragStart
+			Main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + d.X, startPos.Y.Scale, startPos.Y.Offset + d.Y)
+		end
+	end)
+	UserInputService.InputEnded:Connect(function(i)
+		if i.UserInputType == Enum.UserInputType.Touch or i.UserInputType == Enum.UserInputType.MouseButton1 then
+			dragging = false
+		end
+	end)
 end
 
+--== ВКЛАДКИ ==--
+local TabBar = new("Frame", {
+	Size = UDim2.new(1, -20, 0, 34),
+	Position = UDim2.new(0, 10, 0, 58),
+	BackgroundColor3 = C.panel,
+	BorderSizePixel = 0,
+}, Main)
+corner(TabBar, 10)
+new("UIListLayout", {
+	FillDirection = Enum.FillDirection.Horizontal,
+	Padding = UDim.new(0, 4),
+	HorizontalAlignment = Enum.HorizontalAlignment.Center,
+	VerticalAlignment = Enum.VerticalAlignment.Center,
+}, TabBar)
 
--- === ПРОВЕРКА: ТЫ УБИЙЦА? ===
+local Pages, Tabs = {}, {}
 
-local function isLocalMurderer()
-    local character = LocalPlayer.Character
-    local backpack = LocalPlayer:FindFirstChildOfClass("Backpack")
+local function makeTab(name, icon)
+	local btn = new("TextButton", {
+		Size = UDim2.new(0, 98, 1, -6),
+		BackgroundColor3 = C.card,
+		BackgroundTransparency = 1,
+		Text = icon .. " " .. name,
+		TextColor3 = C.muted,
+		Font = Enum.Font.GothamBold,
+		TextSize = 12,
+		AutoButtonColor = false,
+	}, TabBar)
+	corner(btn, 8)
 
-    local containers = {character, backpack}
+	local page = new("ScrollingFrame", {
+		Size = UDim2.new(1, -20, 1, -108),
+		Position = UDim2.new(0, 10, 0, 100),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		ScrollBarThickness = 3,
+		ScrollBarImageColor3 = C.violet,
+		CanvasSize = UDim2.new(0, 0, 0, 0),
+		AutomaticCanvasSize = Enum.AutomaticSize.Y,
+		Visible = false,
+	}, Main)
+	new("UIListLayout", {Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder}, page)
+	new("UIPadding", {PaddingBottom = UDim.new(0, 8)}, page)
 
-    for _, container in ipairs(containers) do
-        if container then
-            for _, tool in ipairs(container:GetChildren()) do
-                if tool:IsA("Tool") and tool.Name == "Knife" then
-                    return true
-                end
-            end
-        end
-    end
+	Pages[name], Tabs[name] = page, btn
 
-    local roles = getRoleData()
-
-    if roles and roles[LocalPlayer] == "Murderer" then
-        return true
-    end
-
-    return false
+	btn.MouseButton1Click:Connect(function()
+		for n, p in pairs(Pages) do
+			p.Visible = (n == name)
+			tween(Tabs[n], 0.2, {
+				BackgroundTransparency = (n == name) and 0 or 1,
+				TextColor3 = (n == name) and C.text or C.muted,
+			})
+		end
+	end)
+	return page
 end
 
+local PageMain = makeTab("Main", "🎮")
+local PageVisual = makeTab("Visual", "👁")
+local PageMisc = makeTab("Misc", "⚙")
 
--- === АВТОУБИЙСТВО ВСЕХ ===
+--== ЭЛЕМЕНТЫ UI ==--
+local function sectionLabel(parent, text)
+	new("TextLabel", {
+		Size = UDim2.new(1, 0, 0, 20),
+		BackgroundTransparency = 1,
+		Text = text,
+		TextColor3 = C.muted,
+		Font = Enum.Font.GothamBold,
+		TextSize = 11,
+		TextXAlignment = Enum.TextXAlignment.Left,
+	}, parent)
+end
 
+local function toggle(parent, title, desc, accent, callback)
+	local card = new("Frame", {
+		Size = UDim2.new(1, 0, 0, 56),
+		BackgroundColor3 = C.card,
+		BorderSizePixel = 0,
+	}, parent)
+	corner(card, 12)
+	local st = stroke(card, C.stroke, 1)
+
+	new("TextLabel", {
+		Size = UDim2.new(1, -80, 0, 20),
+		Position = UDim2.new(0, 14, 0, 9),
+		BackgroundTransparency = 1,
+		Text = title,
+		TextColor3 = C.text,
+		Font = Enum.Font.GothamBold,
+		TextSize = 14,
+		TextXAlignment = Enum.TextXAlignment.Left,
+	}, card)
+
+	new("TextLabel", {
+		Size = UDim2.new(1, -80, 0, 16),
+		Position = UDim2.new(0, 14, 0, 29),
+		BackgroundTransparency = 1,
+		Text = desc,
+		TextColor3 = C.muted,
+		Font = Enum.Font.Gotham,
+		TextSize = 11,
+		TextXAlignment = Enum.TextXAlignment.Left,
+	}, card)
+
+	local pill = new("Frame", {
+		Size = UDim2.new(0, 46, 0, 24),
+		Position = UDim2.new(1, -60, 0.5, -12),
+		BackgroundColor3 = Color3.fromRGB(45, 49, 72),
+		BorderSizePixel = 0,
+	}, card)
+	corner(pill, 12)
+
+	local knob = new("Frame", {
+		Size = UDim2.new(0, 18, 0, 18),
+		Position = UDim2.new(0, 3, 0.5, -9),
+		BackgroundColor3 = C.muted,
+		BorderSizePixel = 0,
+	}, pill)
+	corner(knob, 9)
+
+	local hit = new("TextButton", {
+		Size = UDim2.new(1, 0, 1, 0),
+		BackgroundTransparency = 1,
+		Text = "",
+	}, card)
+
+	local state = false
+	hit.MouseButton1Click:Connect(function()
+		state = not state
+		tween(pill, 0.2, {BackgroundColor3 = state and accent or Color3.fromRGB(45, 49, 72)})
+		tween(knob, 0.2, {
+			Position = state and UDim2.new(1, -21, 0.5, -9) or UDim2.new(0, 3, 0.5, -9),
+			BackgroundColor3 = state and Color3.new(1,1,1) or C.muted,
+		})
+		tween(st, 0.2, {Color = state and accent or C.stroke, Transparency = state and 0.1 or 0.4})
+		callback(state)
+	end)
+	return card
+end
+
+local function slider(parent, title, min, max, default, accent, callback)
+	local card = new("Frame", {
+		Size = UDim2.new(1, 0, 0, 62),
+		BackgroundColor3 = C.card,
+		BorderSizePixel = 0,
+	}, parent)
+	corner(card, 12)
+	stroke(card)
+
+	new("TextLabel", {
+		Size = UDim2.new(1, -70, 0, 20),
+		Position = UDim2.new(0, 14, 0, 8),
+		BackgroundTransparency = 1,
+		Text = title,
+		TextColor3 = C.text,
+		Font = Enum.Font.GothamBold,
+		TextSize = 13,
+		TextXAlignment = Enum.TextXAlignment.Left,
+	}, card)
+
+	local val = new("TextLabel", {
+		Size = UDim2.new(0, 50, 0, 20),
+		Position = UDim2.new(1, -64, 0, 8),
+		BackgroundTransparency = 1,
+		Text = tostring(default),
+		TextColor3 = accent,
+		Font = Enum.Font.GothamBold,
+		TextSize = 13,
+		TextXAlignment = Enum.TextXAlignment.Right,
+	}, card)
+
+	local track = new("Frame", {
+		Size = UDim2.new(1, -28, 0, 6),
+		Position = UDim2.new(0, 14, 0, 40),
+		BackgroundColor3 = Color3.fromRGB(45, 49, 72),
+		BorderSizePixel = 0,
+	}, card)
+	corner(track, 3)
+
+	local fill = new("Frame", {
+		Size = UDim2.new((default - min) / (max - min), 0, 1, 0),
+		BackgroundColor3 = accent,
+		BorderSizePixel = 0,
+	}, track)
+	corner(fill, 3)
+
+	local knob = new("Frame", {
+		Size = UDim2.new(0, 14, 0, 14),
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.new((default - min) / (max - min), 0, 0.5, 0),
+		BackgroundColor3 = Color3.new(1, 1, 1),
+		BorderSizePixel = 0,
+		ZIndex = 3,
+	}, track)
+	corner(knob, 7)
+
+	local hit = new("TextButton", {
+		Size = UDim2.new(1, 0, 0, 28),
+		Position = UDim2.new(0, 0, 0, -11),
+		BackgroundTransparency = 1,
+		Text = "",
+	}, track)
+
+	local sliding = false
+	local function setFromX(x)
+		local rel = math.clamp((x - track.AbsolutePosition.X) / track.AbsoluteSize.X, 0, 1)
+		local v = math.floor(min + (max - min) * rel + 0.5)
+		val.Text = tostring(v)
+		fill.Size = UDim2.new(rel, 0, 1, 0)
+		knob.Position = UDim2.new(rel, 0, 0.5, 0)
+		callback(v)
+	end
+
+	hit.InputBegan:Connect(function(i)
+		if i.UserInputType == Enum.UserInputType.Touch or i.UserInputType == Enum.UserInputType.MouseButton1 then
+			sliding = true
+			setFromX(i.Position.X)
+		end
+	end)
+	UserInputService.InputChanged:Connect(function(i)
+		if sliding and (i.UserInputType == Enum.UserInputType.Touch or i.UserInputType == Enum.UserInputType.MouseMovement) then
+			setFromX(i.Position.X)
+		end
+	end)
+	UserInputService.InputEnded:Connect(function(i)
+		if i.UserInputType == Enum.UserInputType.Touch or i.UserInputType == Enum.UserInputType.MouseButton1 then
+			sliding = false
+		end
+	end)
+	return card
+end
+
+--============================================
+--  ЛОГИКА
+--============================================
+
+local bv, bg, flyConn
+local espObjects, roleObjects = {}, {}
+local killThread, gunThread, roleThread
+
+--== FLY ==--
+local function stopFly()
+	if flyConn then flyConn:Disconnect() flyConn = nil end
+	if bv then bv:Destroy() bv = nil end
+	if bg then bg:Destroy() bg = nil end
+	local h = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
+	if h then h.PlatformStand = false end
+end
+
+local function startFly()
+	stopFly()
+	local char = LP.Character
+	if not char then return end
+	local hum = char:FindFirstChildOfClass("Humanoid")
+	local root = char:FindFirstChild("HumanoidRootPart")
+	if not hum or not root then return end
+
+	bv = new("BodyVelocity", {MaxForce = Vector3.new(1e5,1e5,1e5), Velocity = Vector3.zero}, root)
+	bg = new("BodyGyro", {MaxTorque = Vector3.new(1e5,1e5,1e5), P = 9000, CFrame = root.CFrame}, root)
+	hum.PlatformStand = true
+
+	flyConn = RunService.RenderStepped:Connect(function()
+		if not bv or not bv.Parent then return end
+		local cam = workspace.CurrentCamera
+		local move = hum.MoveDirection
+		local look = cam.CFrame.LookVector
+		local right = cam.CFrame.RightVector
+
+		local fL = Vector3.new(look.X, 0, look.Z)
+		local fR = Vector3.new(right.X, 0, right.Z)
+		if fL.Magnitude > 0 then fL = fL.Unit end
+		if fR.Magnitude > 0 then fR = fR.Unit end
+
+		local vel = (fL * move:Dot(fL) + fR * move:Dot(fR)) * S.FlySpeed
+		vel = vel + Vector3.new(0, look.Y * S.FlySpeed, 0)
+		bv.Velocity = vel
+		if fL.Magnitude > 0 then
+			bg.CFrame = CFrame.lookAt(root.Position, root.Position + fL)
+		end
+	end)
+end
+
+--== РОЛИ ИЗ ДАННЫХ ИГРЫ ==--
+local ROLE_COLORS = {
+	Murderer = C.red, Sheriff = Color3.fromRGB(60,150,255),
+	Hero = C.amber, Innocent = C.green,
+}
+
+local function getRoles()
+	local containers = {}
+	local rem = ReplicatedStorage:FindFirstChild("Remotes")
+	if rem then
+		local gp = rem:FindFirstChild("Gameplay")
+		if gp then
+			local pd = gp:FindFirstChild("PlayerData")
+			if pd then table.insert(containers, pd) end
+		end
+	end
+	local direct = ReplicatedStorage:FindFirstChild("PlayerData")
+	if direct then table.insert(containers, direct) end
+
+	for _, cont in ipairs(containers) do
+		local result = {}
+		for _, plr in ipairs(Players:GetPlayers()) do
+			local item = cont:FindFirstChild(plr.Name)
+			if item then
+				local rv = item:FindFirstChild("Role")
+				if rv and type(rv.Value) == "string" then
+					result[plr] = rv.Value
+				end
+			end
+		end
+		if next(result) then return result end
+	end
+	return nil
+end
+
+--== ESP ПО ОРУЖИЮ ==--
+local function clearESP()
+	for _, o in pairs(espObjects) do if o then o:Destroy() end end
+	espObjects = {}
+end
+
+local function updateESP()
+	if not S.ESP then clearESP() return end
+	for _, plr in ipairs(Players:GetPlayers()) do
+		if plr ~= LP and plr.Character then
+			local murderer, sheriff = false, false
+			local function scan(c)
+				if not c then return end
+				for _, t in ipairs(c:GetChildren()) do
+					if t:IsA("Tool") then
+						if t.Name == "Knife" then murderer = true end
+						if t.Name == "Gun" then sheriff = true end
+					end
+				end
+			end
+			scan(plr.Character)
+			scan(plr:FindFirstChildOfClass("Backpack"))
+
+			if murderer or sheriff then
+				local hl = espObjects[plr]
+				if not hl or not hl.Parent then
+					hl = new("Highlight", {
+						FillTransparency = 0.55, OutlineTransparency = 0,
+						Adornee = plr.Character, DepthMode = Enum.HighlightDepthMode.AlwaysOnTop,
+					}, plr.Character)
+					espObjects[plr] = hl
+				end
+				hl.FillColor = murderer and C.red or Color3.fromRGB(60,150,255)
+				hl.OutlineColor = murderer and Color3.fromRGB(255,140,160) or Color3.fromRGB(140,200,255)
+			elseif espObjects[plr] then
+				espObjects[plr]:Destroy()
+				espObjects[plr] = nil
+			end
+		end
+	end
+end
+
+--== РОЛИ НАД ГОЛОВОЙ ==--
+local function clearRoles()
+	for _, o in pairs(roleObjects) do if o then o:Destroy() end end
+	roleObjects = {}
+end
+
+local function updateRoles()
+	if not S.Roles then clearRoles() return end
+	local roles = getRoles()
+	if not roles then return end
+
+	for plr, role in pairs(roles) do
+		if plr.Character then
+			local head = plr.Character:FindFirstChild("Head")
+			if head then
+				local bb = roleObjects[plr]
+				if not bb or not bb.Parent then
+					bb = new("BillboardGui", {
+						Name = "LV_Role", Size = UDim2.new(0, 140, 0, 30),
+						StudsOffset = Vector3.new(0, 2.6, 0), AlwaysOnTop = true, Adornee = head,
+					}, head)
+					new("TextLabel", {
+						Name = "T", Size = UDim2.new(1,0,1,0), BackgroundTransparency = 1,
+						Font = Enum.Font.GothamBlack, TextSize = 14,
+						TextStrokeTransparency = 0, TextStrokeColor3 = Color3.new(0,0,0),
+					}, bb)
+					roleObjects[plr] = bb
+				end
+				local t = bb:FindFirstChild("T")
+				if t then
+					t.Text = (plr == LP and "★ " or "") .. role
+					t.TextColor3 = ROLE_COLORS[role] or C.text
+				end
+			end
+		end
+	end
+end
+
+--== KILL ALL ==--
 local function getKnife()
-    local character = LocalPlayer.Character
-
-    if character then
-        local knife = character:FindFirstChild("Knife")
-
-        if knife and knife:IsA("Tool") then
-            return knife
-        end
-    end
-
-    local backpack = LocalPlayer:FindFirstChildOfClass("Backpack")
-
-    if backpack then
-        local knife = backpack:FindFirstChild("Knife")
-
-        if knife and knife:IsA("Tool") then
-            return knife
-        end
-    end
-
-    return nil
+	local char = LP.Character
+	if char then
+		local k = char:FindFirstChild("Knife")
+		if k and k:IsA("Tool") then return k end
+	end
+	local bp = LP:FindFirstChildOfClass("Backpack")
+	if bp then
+		local k = bp:FindFirstChild("Knife")
+		if k and k:IsA("Tool") then return k end
+	end
+	return nil
 end
 
+local function amMurderer()
+	if getKnife() then return true end
+	local r = getRoles()
+	return r and r[LP] == "Murderer" or false
+end
 
 local function startKillAll()
-    if killConnection then
-        return
-    end
+	if killThread then return end
+	killThread = task.spawn(function()
+		while S.KillAll and Gui.Parent do
+			local char = LP.Character
+			local hum = char and char:FindFirstChildOfClass("Humanoid")
+			local root = char and char:FindFirstChild("HumanoidRootPart")
+			local knife = getKnife()
 
-    killConnection = task.spawn(function()
-        while Settings.KillAll and ScreenGui.Parent do
-            local character = LocalPlayer.Character
-            local humanoid = character
-                and character:FindFirstChildOfClass("Humanoid")
-            local root = character
-                and character:FindFirstChild("HumanoidRootPart")
-
-            local knife = getKnife()
-
-            if humanoid and root and knife and isLocalMurderer() then
-                -- Берём нож в руки
-                if knife.Parent ~= character then
-                    humanoid:EquipTool(knife)
-                    task.wait(0.15)
-                end
-
-                for _, target in ipairs(Players:GetPlayers()) do
-                    if not Settings.KillAll then
-                        break
-                    end
-
-                    if target ~= LocalPlayer and target.Character then
-                        local targetRoot =
-                            target.Character:FindFirstChild("HumanoidRootPart")
-
-                        local targetHumanoid =
-                            target.Character:FindFirstChildOfClass("Humanoid")
-
-                        if targetRoot and targetHumanoid
-                            and targetHumanoid.Health > 0 then
-
-                            -- Подлетаем к цели
-                            root.CFrame =
-                                targetRoot.CFrame * CFrame.new(0, 0, 2)
-
-                            task.wait(0.12)
-
-                            -- Активируем нож
-                            pcall(function()
-                                knife:Activate()
-                            end)
-
-                            -- Пытаемся нанести удар через доступный Remote
-                            local stab = knife:FindFirstChild("Stab")
-
-                            if stab and stab:IsA("RemoteEvent") then
-                                pcall(function()
-                                    stab:FireServer("Down")
-                                end)
-                            end
-
-                            task.wait(0.25)
-                        end
-                    end
-                end
-            end
-
-            task.wait(0.4)
-        end
-
-        killConnection = nil
-    end)
+			if hum and root and knife and amMurderer() then
+				if knife.Parent ~= char then
+					pcall(function() hum:EquipTool(knife) end)
+					task.wait(0.15)
+				end
+				for _, target in ipairs(Players:GetPlayers()) do
+					if not S.KillAll then break end
+					if target ~= LP and target.Character then
+						local tr = target.Character:FindFirstChild("HumanoidRootPart")
+						local th = target.Character:FindFirstChildOfClass("Humanoid")
+						if tr and th and th.Health > 0 then
+							root.CFrame = tr.CFrame * CFrame.new(0, 0, 1.8)
+							task.wait(0.1)
+							pcall(function() knife:Activate() end)
+							local stab = knife:FindFirstChild("Stab")
+							if stab and stab:IsA("RemoteEvent") then
+								pcall(function() stab:FireServer("Down") end)
+							end
+							task.wait(0.22)
+						end
+					end
+				end
+			end
+			task.wait(0.35)
+		end
+		killThread = nil
+	end)
 end
 
-
-local function toggleKillAll(state)
-    Settings.KillAll = state
-
-    if state then
-        startKillAll()
-    end
-end
-
-
-local function togglePreRoles(state)
-    Settings.PreRoles = state
-
-    if state then
-        updatePreRoles()
-    else
-        clearRoleESP()
-    end
-end
-
-
--- Обновление ролей
-task.spawn(function()
-    while ScreenGui.Parent do
-        updatePreRoles()
-        task.wait(0.5)
-    end
+--== AUTO GUN ==--
+gunThread = task.spawn(function()
+	while Gui.Parent do
+		if S.AutoGun then
+			local drop = workspace:FindFirstChild("GunDrop")
+			local root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+			if drop and root then
+				local old = root.CFrame
+				local cf = drop:IsA("BasePart") and drop.CFrame or (drop.PrimaryPart and drop.PrimaryPart.CFrame)
+				if cf then
+					root.CFrame = cf
+					task.wait(0.15)
+					root.CFrame = old
+				end
+			end
+		end
+		task.wait(0.4)
+	end
 end)
 
-
--- === КНОПКИ В МЕНЮ ===
--- Если старые кнопки уже занимают позиции 50–200,
--- увеличь высоту MainFrame до 420.
-
-MainFrame.Size = UDim2.new(0, 280, 0, 420)
-
-createToggle("💀 Kill All", 250, toggleKillAll)
-createToggle("🎭 Roles ESP", 300, togglePreRoles)
-
-
--- Очистка при закрытии меню
-closeBtn.MouseButton1Click:Connect(function()
-    Settings.KillAll = false
-    Settings.PreRoles = false
-
-    clearRoleESP()
-
-    if killConnection then
-        task.cancel(killConnection)
-        killConnection = nil
-    end
+--== ЦИКЛ ВИЗУАЛА ==--
+roleThread = task.spawn(function()
+	while Gui.Parent do
+		updateESP()
+		updateRoles()
+		task.wait(0.5)
+	end
 end)
+
+--== SPEED ==--
+local function applySpeed()
+	local h = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
+	if h then h.WalkSpeed = S.Speed and S.WalkSpeed or 16 end
+end
+
+--== РЕСПАВН ==--
+LP.CharacterAdded:Connect(function()
+	task.wait(1)
+	bv, bg = nil, nil
+	if S.Fly then startFly() end
+	if S.Speed then applySpeed() end
+end)
+
+--============================================
+--  НАПОЛНЕНИЕ ВКЛАДОК
+--============================================
+
+sectionLabel(PageMain, "  ДВИЖЕНИЕ")
+toggle(PageMain, "✈️ Fly", "Джойстик + наклон камеры", C.cyan, function(v)
+	S.Fly = v
+	if v then startFly() else stopFly() end
+end)
+slider(PageMain, "Скорость полёта", 20, 200, S.FlySpeed, C.cyan, function(v) S.FlySpeed = v end)
+
+toggle(PageMain, "🏃 Speed Hack", "Быстрый бег", C.green, function(v)
+	S.Speed = v
+	applySpeed()
+end)
+slider(PageMain, "Скорость бега", 16, 120, S.WalkSpeed, C.green, function(v)
+	S.WalkSpeed = v
+	if S.Speed then applySpeed() end
+end)
+
+sectionLabel(PageVisual, "  ПОДСВЕТКА")
+toggle(PageVisual, "👁 Weapon ESP", "Убийца / шериф по оружию", C.violet, function(v)
+	S.ESP = v
+	if not v then clearESP() end
+end)
+toggle(PageVisual, "🎭 Roles ESP", "Роли из данных игры", C.amber, function(v)
+	S.Roles = v
+	if not v then clearRoles() end
+end)
+
+sectionLabel(PageMisc, "  АВТОМАТИКА")
+toggle(PageMisc, "💀 Kill All", "Только если ты убийца", C.red, function(v)
+	S.KillAll = v
+	if v then startKillAll() end
+end)
+toggle(PageMisc, "🔫 Auto Gun", "Авто-подбор пистолета", C.amber, function(v)
+	S.AutoGun = v
+end)
+
+--== ФУТЕР ==--
+local Footer = new("TextLabel", {
+	Size = UDim2.new(1, 0, 0, 22),
+	Position = UDim2.new(0, 0, 1, -22),
+	BackgroundTransparency = 1,
+	Text = "LUAVERSE · v2.0",
+	TextColor3 = C.muted,
+	Font = Enum.Font.Gotham,
+	TextSize = 10,
+}, Main)
+
+--== СВОРАЧИВАНИЕ ==--
+local minimized = false
+MinBtn.MouseButton1Click:Connect(function()
+	minimized = not minimized
+	tween(Main, 0.25, {Size = minimized and UDim2.new(0, 330, 0, 52) or UDim2.new(0, 330, 0, 430)})
+	MinBtn.Text = minimized and "+" or "–"
+end)
+
+--== ЗАКРЫТИЕ ==--
+CloseBtn.MouseButton1Click:Connect(function()
+	S.Fly, S.ESP, S.Roles, S.KillAll, S.AutoGun, S.Speed = false, false, false, false, false, false
+	stopFly()
+	clearESP()
+	clearRoles()
+	applySpeed()
+	if killThread then task.cancel(killThread) killThread = nil end
+	tween(Main, 0.2, {Size = UDim2.new(0, 330, 0, 0)})
+	task.wait(0.22)
+	Gui:Destroy()
+end)
+
+--== ОТКРЫТИЕ: АНИМАЦИЯ + ПЕРВАЯ ВКЛАДКА ==--
+Main.Size = UDim2.new(0, 330, 0, 0)
+tween(Main, 0.3, {Size = UDim2.new(0, 330, 0, 430)})
+Tabs["Main"].BackgroundTransparency = 0
+Tabs["Main"].TextColor3 = C.text
+PageMain.Visible = true
+
+print("⚡ LUAVERSE HUB loaded")
