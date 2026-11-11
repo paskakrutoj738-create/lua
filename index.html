@@ -1,18 +1,323 @@
---============================================
---  ⚡ LUAVERSE HUB | MM2  (fixed v2.1)
---============================================
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LUAVERSE — MM2 Hub</title>
+<meta name="description" content="Ultimate MM2 Script Hub with Fly, ESP and Kill All.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
 
-local ok, err = pcall(function()
+<!-- Шрифты -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;700;900&family=Inter:wght@400;600&family=JetBrains+Mono&display=swap" rel="stylesheet">
 
+<style>
+/* === CSS STYLES === */
+:root {
+    --bg: #050508;
+    --card-bg: rgba(20, 22, 35, 0.7);
+    --primary: #8b5cf6; /* Violet */
+    --accent: #22d3ee;  /* Cyan */
+    --text: #f8fafc;
+    --muted: #94a3b8;
+    --border: rgba(255, 255, 255, 0.1);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    background-color: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    overflow-x: hidden;
+    min-height: 100vh;
+}
+
+/* Фон с частицами */
+#particles {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    z-index: -1; pointer-events: none;
+}
+
+/* Навигация */
+nav {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 20px 5%;
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(5, 5, 8, 0.8);
+}
+.logo {
+    font-family: 'Unbounded', sans-serif; font-weight: 900; font-size: 1.5rem;
+    background: linear-gradient(90deg, var(--primary), var(--accent));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.status {
+    font-size: 0.9rem; color: var(--accent); font-weight: 600;
+    display: flex; align-items: center; gap: 8px;
+}
+.dot { width: 8px; height: 8px; background: var(--accent); border-radius: 50%; box-shadow: 0 0 10px var(--accent); animation: pulse 2s infinite; }
+@keyframes pulse { 50% { opacity: 0.5; } }
+
+/* Главный контейнер */
+main { max-width: 1000px; margin: 0 auto; padding: 40px 20px; }
+
+/* Герой-секция */
+.hero { text-align: center; margin-bottom: 60px; animation: fadeIn 1s ease; }
+.hero h1 {
+    font-family: 'Unbounded', sans-serif; font-size: clamp(2rem, 5vw, 4rem);
+    line-height: 1.1; margin-bottom: 20px;
+}
+.gradient-text {
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.hero p { color: var(--muted); font-size: 1.1rem; max-width: 600px; margin: 0 auto 30px; }
+
+/* Карточка скрипта */
+.script-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: 30px;
+    backdrop-filter: blur(20px);
+    box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+    transition: transform 0.3s ease;
+}
+.script-card:hover { transform: translateY(-5px); border-color: var(--primary); }
+
+.card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.badge {
+    background: rgba(139, 92, 246, 0.2); color: var(--primary);
+    padding: 5px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 700;
+    border: 1px solid rgba(139, 92, 246, 0.3);
+}
+
+/* Блок кода */
+.code-box {
+    background: #0f111a;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    overflow: hidden;
+    margin-bottom: 20px;
+}
+.code-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 15px;
+    background: rgba(255,255,255,0.03);
+    border-bottom: 1px solid var(--border);
+    font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; color: var(--muted);
+}
+.copy-btn {
+    background: var(--primary); color: white; border: none;
+    padding: 6px 16px; border-radius: 6px; cursor: pointer;
+    font-weight: 600; font-size: 0.85rem; transition: 0.2s;
+}
+.copy-btn:hover { background: #7c3aed; }
+.copy-btn.copied { background: #10b981; }
+
+pre {
+    padding: 20px; overflow-x: auto;
+    font-family: 'JetBrains Mono', monospace; font-size: 0.9rem;
+    color: #a5f3fc; line-height: 1.6;
+}
+
+/* Список функций */
+.features {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px; margin-top: 20px;
+}
+.feature-item {
+    background: rgba(255,255,255,0.03);
+    padding: 15px; border-radius: 12px;
+    border: 1px solid var(--border);
+    text-align: center;
+}
+.feature-item strong { display: block; color: var(--accent); margin-bottom: 5px; }
+.feature-item span { font-size: 0.85rem; color: var(--muted); }
+
+/* Футер */
+footer { text-align: center; margin-top: 60px; color: var(--muted); font-size: 0.9rem; padding-bottom: 20px; }
+
+/* Анимации */
+@keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Тост уведомление */
+.toast {
+    position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(100px);
+    background: rgba(16, 185, 129, 0.9); color: white; padding: 12px 24px;
+    border-radius: 50px; font-weight: 600; opacity: 0; transition: 0.3s;
+    backdrop-filter: blur(5px); z-index: 1000;
+}
+.toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+@media (max-width: 600px) {
+    .hero h1 { font-size: 2rem; }
+    .script-card { padding: 20px; }
+    pre { font-size: 0.75rem; }
+}
+</style>
+</head>
+<body>
+
+<canvas id="particles"></canvas>
+
+<nav>
+    <div class="logo">⚡ LUAVERSE</div>
+    <div class="status"><span class="dot"></span> Online</div>
+</nav>
+
+<main>
+    <section class="hero">
+        <h1>Dominate in <br><span class="gradient-text">Murder Mystery 2</span></h1>
+        <p>Самый стабильный хаб для мобильных и ПК. ESP, Fly, Auto Gun и многое другое в одном красивом меню.</p>
+        <a href="#script" class="copy-btn" style="padding: 12px 30px; font-size: 1rem; text-decoration: none; display: inline-block;">Получить скрипт ↓</a>
+    </section>
+
+    <section id="script" class="script-card">
+        <div class="card-header">
+            <h2>MM2 Universal Hub</h2>
+            <span class="badge">v2.1 Stable</span>
+        </div>
+
+        <div class="code-box">
+            <div class="code-header">
+                <span>lua • loadstring</span>
+                <button class="copy-btn" onclick="copyCode()">📋 Copy Code</button>
+            </div>
+            <!-- Ссылка на raw файл index.html. Замени НИК если нужно! -->
+            <pre><code id="code-block">loadstring(game:HttpGet("https://raw.githubusercontent.com/paskakrutoj738-create/Lua/main/index.html"))()</code></pre>
+        </div>
+
+        <div class="features">
+            <div class="feature-item">
+                <strong>✈️ Smart Fly</strong>
+                <span>Управление джойстиком + камерой</span>
+            </div>
+            <div class="feature-item">
+                <strong>👁️ ESP & Roles</strong>
+                <span>Подсветка убийц и ролей</span>
+            </div>
+            <div class="feature-item">
+                <strong>💀 Kill All</strong>
+                <span>Авто-убийство (если ты murderer)</span>
+            </div>
+            <div class="feature-item">
+                <strong>🎨 Modern UI</strong>
+                <span>Красивое меню с вкладками</span>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <p>Made with 💜 by LUAVERSE Team. <br> Use at your own risk.</p>
+    </footer>
+</main>
+
+<div class="toast" id="toast">✅ Loadstring скопирован!</div>
+
+<!-- СКРИПТ САЙТА (Частицы и копирование) -->
+<script>
+    // 1. Копирование кода
+    function copyCode() {
+        const code = document.getElementById('code-block').innerText;
+        navigator.clipboard.writeText(code).then(() => {
+            const btn = document.querySelector('.code-header .copy-btn');
+            const toast = document.getElementById('toast');
+            
+            btn.innerText = "✅ Copied!";
+            btn.classList.add('copied');
+            toast.classList.add('show');
+
+            setTimeout(() => {
+                btn.innerText = "📋 Copy Code";
+                btn.classList.remove('copied');
+                toast.classList.remove('show');
+            }, 2000);
+        });
+    }
+
+    // 2. Частицы на фоне
+    const canvas = document.getElementById('particles');
+    const ctx = canvas.getContext('2d');
+    let particles = [];
+    
+    function resize() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    class Particle {
+        constructor() {
+            this.x = Math.random() * canvas.width;
+            this.y = Math.random() * canvas.height;
+            this.vx = (Math.random() - 0.5) * 0.5;
+            this.vy = (Math.random() - 0.5) * 0.5;
+            this.size = Math.random() * 2 + 1;
+            this.color = Math.random() > 0.5 ? '#8b5cf6' : '#22d3ee';
+        }
+        update() {
+            this.x += this.vx;
+            this.y += this.vy;
+            if (this.x < 0 || this.x > canvas.width) this.vx *= -1;
+            if (this.y < 0 || this.y > canvas.height) this.vy *= -1;
+        }
+        draw() {
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+            ctx.fillStyle = this.color;
+            ctx.fill();
+        }
+    }
+
+    for (let i = 0; i < 60; i++) particles.push(new Particle());
+
+    function animate() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // Линии между частицами
+        for (let i = 0; i < particles.length; i++) {
+            particles[i].update();
+            particles[i].draw();
+            for (let j = i; j < particles.length; j++) {
+                const dx = particles[i].x - particles[j].x;
+                const dy = particles[i].y - particles[j].y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                if (distance < 100) {
+                    ctx.beginPath();
+                    ctx.strokeStyle = `rgba(139, 92, 246, ${1 - distance/100})`;
+                    ctx.lineWidth = 0.5;
+                    ctx.moveTo(particles[i].x, particles[i].y);
+                    ctx.lineTo(particles[j].x, particles[j].y);
+                    ctx.stroke();
+                }
+            }
+        }
+        requestAnimationFrame(animate);
+    }
+    animate();
+</script>
+
+<!-- 
+    ==========================================
+    ЭТОТ СКРИПТ ЧИТАЕТСЯ САЙТОМ ДЛЯ LOADSTRING
+    НЕ УДАЛЯЙ ЭТОТ ТЕГ, ЕСЛИ ХОЧЕШЬ РАБОТУ ЧЕРЕЗ RAW
+    ==========================================
+-->
+<script type="text/plain" id="roblox-source">
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local StarterGui = game:GetService("StarterGui")
 
 local LP = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
 
+--== НАСТРОЙКИ ==--
 local S = {
 	Fly = false, FlySpeed = 60,
 	ESP = false, Roles = false,
@@ -20,56 +325,34 @@ local S = {
 	Speed = false, WalkSpeed = 32,
 }
 
+--== ПАЛИТРА ==--
 local C = {
-	bg     = Color3.fromRGB(14, 16, 28),
-	panel  = Color3.fromRGB(20, 23, 38),
-	card   = Color3.fromRGB(27, 31, 50),
-	stroke = Color3.fromRGB(58, 64, 96),
-	text   = Color3.fromRGB(238, 241, 255),
-	muted  = Color3.fromRGB(140, 148, 180),
-	violet = Color3.fromRGB(139, 92, 246),
-	cyan   = Color3.fromRGB(34, 211, 238),
-	green  = Color3.fromRGB(52, 211, 153),
-	red    = Color3.fromRGB(251, 80, 110),
-	amber  = Color3.fromRGB(251, 191, 36),
-	off    = Color3.fromRGB(45, 49, 72),
+	bg      = Color3.fromRGB(14, 16, 28),
+	panel   = Color3.fromRGB(20, 23, 38),
+	card    = Color3.fromRGB(27, 31, 50),
+	stroke  = Color3.fromRGB(58, 64, 96),
+	text    = Color3.fromRGB(238, 241, 255),
+	muted   = Color3.fromRGB(140, 148, 180),
+	violet  = Color3.fromRGB(139, 92, 246),
+	cyan    = Color3.fromRGB(34, 211, 238),
+	green   = Color3.fromRGB(52, 211, 153),
+	red     = Color3.fromRGB(251, 80, 110),
+	amber   = Color3.fromRGB(251, 191, 36),
 }
 
---== БЕЗОПАСНЫЕ ХЕЛПЕРЫ ==--
 local function new(class, props, parent)
 	local o = Instance.new(class)
-	for k, v in pairs(props) do
-		pcall(function() o[k] = v end)
-	end
+	for k, v in pairs(props) do o[k] = v end
 	if parent then o.Parent = parent end
 	return o
 end
 
-local function corner(o, r)
-	return new("UICorner", {CornerRadius = UDim.new(0, r or 10)}, o)
-end
-
+local function corner(o, r) return new("UICorner", {CornerRadius = UDim.new(0, r or 10)}, o) end
 local function stroke(o, col, t)
 	return new("UIStroke", {Color = col or C.stroke, Thickness = t or 1, Transparency = 0.4}, o)
 end
-
--- твин с мгновенным фолбэком, если TweenService не работает
 local function tween(o, t, props)
-	local done = pcall(function()
-		TweenService:Create(o, TweenInfo.new(t, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), props):Play()
-	end)
-	if not done then
-		for k, v in pairs(props) do
-			pcall(function() o[k] = v end)
-		end
-	end
-end
-
-local function notify(msg)
-	pcall(function()
-		StarterGui:SetCore("SendNotification", {Title = "⚡ LUAVERSE", Text = msg, Duration = 5})
-	end)
-	print("[LUAVERSE] " .. msg)
+	TweenService:Create(o, TweenInfo.new(t, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), props):Play()
 end
 
 --== ОЧИСТКА СТАРОГО GUI ==--
@@ -82,9 +365,8 @@ local Gui = new("ScreenGui", {
 	ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
 	DisplayOrder = 999,
 }, LP.PlayerGui)
-pcall(function() Gui.IgnoreGuiInset = true end)
 
---== ГЛАВНОЕ ОКНО (сразу полного размера!) ==--
+--== ГЛАВНОЕ ОКНО ==--
 local Main = new("Frame", {
 	Size = UDim2.new(0, 330, 0, 430),
 	Position = UDim2.new(0.5, -165, 0.5, -215),
@@ -92,7 +374,6 @@ local Main = new("Frame", {
 	BorderSizePixel = 0,
 	ClipsDescendants = true,
 	Active = true,
-	Visible = true,
 }, Gui)
 corner(Main, 16)
 stroke(Main, C.violet, 1.5)
@@ -125,14 +406,14 @@ new("TextLabel", {
 	BackgroundTransparency = 1,
 	Text = "⚡ LUAVERSE",
 	TextColor3 = C.text,
-	Font = Enum.Font.GothamBold,
+	Font = Enum.Font.GothamBlack,
 	TextSize = 18,
 	TextXAlignment = Enum.TextXAlignment.Left,
 }, Header)
 
 new("TextLabel", {
 	Size = UDim2.new(0, 60, 0, 16),
-	Position = UDim2.new(0, 138, 0, 19),
+	Position = UDim2.new(0, 132, 0, 19),
 	BackgroundTransparency = 1,
 	Text = "MM2",
 	TextColor3 = C.cyan,
@@ -145,7 +426,7 @@ local MinBtn = new("TextButton", {
 	Size = UDim2.new(0, 28, 0, 28),
 	Position = UDim2.new(1, -66, 0, 12),
 	BackgroundColor3 = C.card,
-	Text = "-",
+	Text = "–",
 	TextColor3 = C.muted,
 	Font = Enum.Font.GothamBold,
 	TextSize = 20,
@@ -157,7 +438,7 @@ local CloseBtn = new("TextButton", {
 	Size = UDim2.new(0, 28, 0, 28),
 	Position = UDim2.new(1, -34, 0, 12),
 	BackgroundColor3 = Color3.fromRGB(60, 26, 38),
-	Text = "X",
+	Text = "✕",
 	TextColor3 = C.red,
 	Font = Enum.Font.GothamBold,
 	TextSize = 13,
@@ -165,7 +446,7 @@ local CloseBtn = new("TextButton", {
 }, Header)
 corner(CloseBtn, 8)
 
---== ПЕРЕТАСКИВАНИЕ ==--
+--== ПЕРЕТАСКИВАНИЕ (тач + мышь) ==--
 do
 	local dragging, dragStart, startPos = false, nil, nil
 	Header.InputBegan:Connect(function(i)
@@ -217,16 +498,16 @@ local function makeTab(name, icon)
 	corner(btn, 8)
 
 	local page = new("ScrollingFrame", {
-		Size = UDim2.new(1, -20, 1, -130),
+		Size = UDim2.new(1, -20, 1, -108),
 		Position = UDim2.new(0, 10, 0, 100),
 		BackgroundTransparency = 1,
 		BorderSizePixel = 0,
 		ScrollBarThickness = 3,
 		ScrollBarImageColor3 = C.violet,
 		CanvasSize = UDim2.new(0, 0, 0, 0),
+		AutomaticCanvasSize = Enum.AutomaticSize.Y,
 		Visible = false,
 	}, Main)
-	pcall(function() page.AutomaticCanvasSize = Enum.AutomaticSize.Y end)
 	new("UIListLayout", {Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder}, page)
 	new("UIPadding", {PaddingBottom = UDim.new(0, 8)}, page)
 
@@ -295,7 +576,7 @@ local function toggle(parent, title, desc, accent, callback)
 	local pill = new("Frame", {
 		Size = UDim2.new(0, 46, 0, 24),
 		Position = UDim2.new(1, -60, 0.5, -12),
-		BackgroundColor3 = C.off,
+		BackgroundColor3 = Color3.fromRGB(45, 49, 72),
 		BorderSizePixel = 0,
 	}, card)
 	corner(pill, 12)
@@ -317,7 +598,7 @@ local function toggle(parent, title, desc, accent, callback)
 	local state = false
 	hit.MouseButton1Click:Connect(function()
 		state = not state
-		tween(pill, 0.2, {BackgroundColor3 = state and accent or C.off})
+		tween(pill, 0.2, {BackgroundColor3 = state and accent or Color3.fromRGB(45, 49, 72)})
 		tween(knob, 0.2, {
 			Position = state and UDim2.new(1, -21, 0.5, -9) or UDim2.new(0, 3, 0.5, -9),
 			BackgroundColor3 = state and Color3.new(1,1,1) or C.muted,
@@ -362,7 +643,7 @@ local function slider(parent, title, min, max, default, accent, callback)
 	local track = new("Frame", {
 		Size = UDim2.new(1, -28, 0, 6),
 		Position = UDim2.new(0, 14, 0, 40),
-		BackgroundColor3 = C.off,
+		BackgroundColor3 = Color3.fromRGB(45, 49, 72),
 		BorderSizePixel = 0,
 	}, card)
 	corner(track, 3)
@@ -393,9 +674,7 @@ local function slider(parent, title, min, max, default, accent, callback)
 
 	local sliding = false
 	local function setFromX(x)
-		local w = track.AbsoluteSize.X
-		if w <= 0 then return end
-		local rel = math.clamp((x - track.AbsolutePosition.X) / w, 0, 1)
+		local rel = math.clamp((x - track.AbsolutePosition.X) / track.AbsoluteSize.X, 0, 1)
 		local v = math.floor(min + (max - min) * rel + 0.5)
 		val.Text = tostring(v)
 		fill.Size = UDim2.new(rel, 0, 1, 0)
@@ -428,8 +707,9 @@ end
 
 local bv, bg, flyConn
 local espObjects, roleObjects = {}, {}
-local killThread
+local killThread, gunThread, roleThread
 
+--== FLY ==--
 local function stopFly()
 	if flyConn then flyConn:Disconnect() flyConn = nil end
 	if bv then bv:Destroy() bv = nil end
@@ -453,7 +733,6 @@ local function startFly()
 	flyConn = RunService.RenderStepped:Connect(function()
 		if not bv or not bv.Parent then return end
 		local cam = workspace.CurrentCamera
-		if not cam then return end
 		local move = hum.MoveDirection
 		local look = cam.CFrame.LookVector
 		local right = cam.CFrame.RightVector
@@ -472,6 +751,7 @@ local function startFly()
 	end)
 end
 
+--== РОЛИ ИЗ ДАННЫХ ИГРЫ ==--
 local ROLE_COLORS = {
 	Murderer = C.red, Sheriff = Color3.fromRGB(60,150,255),
 	Hero = C.amber, Innocent = C.green,
@@ -506,6 +786,7 @@ local function getRoles()
 	return nil
 end
 
+--== ESP ПО ОРУЖИЮ ==--
 local function clearESP()
 	for _, o in pairs(espObjects) do if o then o:Destroy() end end
 	espObjects = {}
@@ -533,9 +814,8 @@ local function updateESP()
 				if not hl or not hl.Parent then
 					hl = new("Highlight", {
 						FillTransparency = 0.55, OutlineTransparency = 0,
-						Adornee = plr.Character,
+						Adornee = plr.Character, DepthMode = Enum.HighlightDepthMode.AlwaysOnTop,
 					}, plr.Character)
-					pcall(function() hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop end)
 					espObjects[plr] = hl
 				end
 				hl.FillColor = murderer and C.red or Color3.fromRGB(60,150,255)
@@ -548,6 +828,7 @@ local function updateESP()
 	end
 end
 
+--== РОЛИ НАД ГОЛОВОЙ ==--
 local function clearRoles()
 	for _, o in pairs(roleObjects) do if o then o:Destroy() end end
 	roleObjects = {}
@@ -570,7 +851,7 @@ local function updateRoles()
 					}, head)
 					new("TextLabel", {
 						Name = "T", Size = UDim2.new(1,0,1,0), BackgroundTransparency = 1,
-						Font = Enum.Font.GothamBold, TextSize = 14,
+						Font = Enum.Font.GothamBlack, TextSize = 14,
 						TextStrokeTransparency = 0, TextStrokeColor3 = Color3.new(0,0,0),
 					}, bb)
 					roleObjects[plr] = bb
@@ -585,6 +866,7 @@ local function updateRoles()
 	end
 end
 
+--== KILL ALL ==--
 local function getKnife()
 	local char = LP.Character
 	if char then
@@ -643,40 +925,42 @@ local function startKillAll()
 	end)
 end
 
-task.spawn(function()
+--== AUTO GUN ==--
+gunThread = task.spawn(function()
 	while Gui.Parent do
 		if S.AutoGun then
-			pcall(function()
-				local drop = workspace:FindFirstChild("GunDrop")
-				local root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
-				if drop and root then
-					local old = root.CFrame
-					local cf = drop:IsA("BasePart") and drop.CFrame or (drop.PrimaryPart and drop.PrimaryPart.CFrame)
-					if cf then
-						root.CFrame = cf
-						task.wait(0.15)
-						root.CFrame = old
-					end
+			local drop = workspace:FindFirstChild("GunDrop")
+			local root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+			if drop and root then
+				local old = root.CFrame
+				local cf = drop:IsA("BasePart") and drop.CFrame or (drop.PrimaryPart and drop.PrimaryPart.CFrame)
+				if cf then
+					root.CFrame = cf
+					task.wait(0.15)
+					root.CFrame = old
 				end
-			end)
+			end
 		end
 		task.wait(0.4)
 	end
 end)
 
-task.spawn(function()
+--== ЦИКЛ ВИЗУАЛА ==--
+roleThread = task.spawn(function()
 	while Gui.Parent do
-		pcall(updateESP)
-		pcall(updateRoles)
+		updateESP()
+		updateRoles()
 		task.wait(0.5)
 	end
 end)
 
+--== SPEED ==--
 local function applySpeed()
 	local h = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
 	if h then h.WalkSpeed = S.Speed and S.WalkSpeed or 16 end
 end
 
+--== РЕСПАВН ==--
 LP.CharacterAdded:Connect(function()
 	task.wait(1)
 	bv, bg = nil, nil
@@ -685,7 +969,7 @@ LP.CharacterAdded:Connect(function()
 end)
 
 --============================================
---  ВКЛАДКИ
+--  НАПОЛНЕНИЕ ВКЛАДОК
 --============================================
 
 sectionLabel(PageMain, "  ДВИЖЕНИЕ")
@@ -723,11 +1007,12 @@ toggle(PageMisc, "🔫 Auto Gun", "Авто-подбор пистолета", C.
 	S.AutoGun = v
 end)
 
-new("TextLabel", {
+--== ФУТЕР ==--
+local Footer = new("TextLabel", {
 	Size = UDim2.new(1, 0, 0, 22),
 	Position = UDim2.new(0, 0, 1, -22),
 	BackgroundTransparency = 1,
-	Text = "LUAVERSE · v2.1",
+	Text = "LUAVERSE · v2.0",
 	TextColor3 = C.muted,
 	Font = Enum.Font.Gotham,
 	TextSize = 10,
@@ -738,7 +1023,7 @@ local minimized = false
 MinBtn.MouseButton1Click:Connect(function()
 	minimized = not minimized
 	tween(Main, 0.25, {Size = minimized and UDim2.new(0, 330, 0, 52) or UDim2.new(0, 330, 0, 430)})
-	MinBtn.Text = minimized and "+" or "-"
+	MinBtn.Text = minimized and "+" or "–"
 end)
 
 --== ЗАКРЫТИЕ ==--
@@ -748,25 +1033,21 @@ CloseBtn.MouseButton1Click:Connect(function()
 	clearESP()
 	clearRoles()
 	applySpeed()
+	if killThread then task.cancel(killThread) killThread = nil end
+	tween(Main, 0.2, {Size = UDim2.new(0, 330, 0, 0)})
+	task.wait(0.22)
 	Gui:Destroy()
 end)
 
---== СТАРТОВАЯ ВКЛАДКА (без анимации размера — окно уже видно) ==--
+--== ОТКРЫТИЕ: АНИМАЦИЯ + ПЕРВАЯ ВКЛАДКА ==--
+Main.Size = UDim2.new(0, 330, 0, 0)
+tween(Main, 0.3, {Size = UDim2.new(0, 330, 0, 430)})
 Tabs["Main"].BackgroundTransparency = 0
 Tabs["Main"].TextColor3 = C.text
 PageMain.Visible = true
 
-notify("Hub loaded ✔")
+print("⚡ LUAVERSE HUB loaded")
+</script>
 
-end)
-
-if not ok then
-	pcall(function()
-		game:GetService("StarterGui"):SetCore("SendNotification", {
-			Title = "⚡ LUAVERSE ERROR",
-			Text = tostring(err),
-			Duration = 10,
-		})
-	end)
-	warn("[LUAVERSE ERROR] " .. tostring(err))
-end
+</body>
+	</html>
