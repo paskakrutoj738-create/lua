@@ -1,18 +1,18 @@
 --============================================
---  ⚡ LUAVERSE HUB | MM2
---  Fly · ESP · Roles · Kill All · Auto Gun · Speed
+--  ⚡ LUAVERSE HUB | MM2  (fixed v2.1)
 --============================================
+
+local ok, err = pcall(function()
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local StarterGui = game:GetService("StarterGui")
 
 local LP = Players.LocalPlayer
-local Camera = workspace.CurrentCamera
 
---== НАСТРОЙКИ ==--
 local S = {
 	Fly = false, FlySpeed = 60,
 	ESP = false, Roles = false,
@@ -20,34 +20,56 @@ local S = {
 	Speed = false, WalkSpeed = 32,
 }
 
---== ПАЛИТРА ==--
 local C = {
-	bg      = Color3.fromRGB(14, 16, 28),
-	panel   = Color3.fromRGB(20, 23, 38),
-	card    = Color3.fromRGB(27, 31, 50),
-	stroke  = Color3.fromRGB(58, 64, 96),
-	text    = Color3.fromRGB(238, 241, 255),
-	muted   = Color3.fromRGB(140, 148, 180),
-	violet  = Color3.fromRGB(139, 92, 246),
-	cyan    = Color3.fromRGB(34, 211, 238),
-	green   = Color3.fromRGB(52, 211, 153),
-	red     = Color3.fromRGB(251, 80, 110),
-	amber   = Color3.fromRGB(251, 191, 36),
+	bg     = Color3.fromRGB(14, 16, 28),
+	panel  = Color3.fromRGB(20, 23, 38),
+	card   = Color3.fromRGB(27, 31, 50),
+	stroke = Color3.fromRGB(58, 64, 96),
+	text   = Color3.fromRGB(238, 241, 255),
+	muted  = Color3.fromRGB(140, 148, 180),
+	violet = Color3.fromRGB(139, 92, 246),
+	cyan   = Color3.fromRGB(34, 211, 238),
+	green  = Color3.fromRGB(52, 211, 153),
+	red    = Color3.fromRGB(251, 80, 110),
+	amber  = Color3.fromRGB(251, 191, 36),
+	off    = Color3.fromRGB(45, 49, 72),
 }
 
+--== БЕЗОПАСНЫЕ ХЕЛПЕРЫ ==--
 local function new(class, props, parent)
 	local o = Instance.new(class)
-	for k, v in pairs(props) do o[k] = v end
+	for k, v in pairs(props) do
+		pcall(function() o[k] = v end)
+	end
 	if parent then o.Parent = parent end
 	return o
 end
 
-local function corner(o, r) return new("UICorner", {CornerRadius = UDim.new(0, r or 10)}, o) end
+local function corner(o, r)
+	return new("UICorner", {CornerRadius = UDim.new(0, r or 10)}, o)
+end
+
 local function stroke(o, col, t)
 	return new("UIStroke", {Color = col or C.stroke, Thickness = t or 1, Transparency = 0.4}, o)
 end
+
+-- твин с мгновенным фолбэком, если TweenService не работает
 local function tween(o, t, props)
-	TweenService:Create(o, TweenInfo.new(t, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), props):Play()
+	local done = pcall(function()
+		TweenService:Create(o, TweenInfo.new(t, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), props):Play()
+	end)
+	if not done then
+		for k, v in pairs(props) do
+			pcall(function() o[k] = v end)
+		end
+	end
+end
+
+local function notify(msg)
+	pcall(function()
+		StarterGui:SetCore("SendNotification", {Title = "⚡ LUAVERSE", Text = msg, Duration = 5})
+	end)
+	print("[LUAVERSE] " .. msg)
 end
 
 --== ОЧИСТКА СТАРОГО GUI ==--
@@ -60,8 +82,9 @@ local Gui = new("ScreenGui", {
 	ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
 	DisplayOrder = 999,
 }, LP.PlayerGui)
+pcall(function() Gui.IgnoreGuiInset = true end)
 
---== ГЛАВНОЕ ОКНО ==--
+--== ГЛАВНОЕ ОКНО (сразу полного размера!) ==--
 local Main = new("Frame", {
 	Size = UDim2.new(0, 330, 0, 430),
 	Position = UDim2.new(0.5, -165, 0.5, -215),
@@ -69,6 +92,7 @@ local Main = new("Frame", {
 	BorderSizePixel = 0,
 	ClipsDescendants = true,
 	Active = true,
+	Visible = true,
 }, Gui)
 corner(Main, 16)
 stroke(Main, C.violet, 1.5)
@@ -101,14 +125,14 @@ new("TextLabel", {
 	BackgroundTransparency = 1,
 	Text = "⚡ LUAVERSE",
 	TextColor3 = C.text,
-	Font = Enum.Font.GothamBlack,
+	Font = Enum.Font.GothamBold,
 	TextSize = 18,
 	TextXAlignment = Enum.TextXAlignment.Left,
 }, Header)
 
 new("TextLabel", {
 	Size = UDim2.new(0, 60, 0, 16),
-	Position = UDim2.new(0, 132, 0, 19),
+	Position = UDim2.new(0, 138, 0, 19),
 	BackgroundTransparency = 1,
 	Text = "MM2",
 	TextColor3 = C.cyan,
@@ -121,7 +145,7 @@ local MinBtn = new("TextButton", {
 	Size = UDim2.new(0, 28, 0, 28),
 	Position = UDim2.new(1, -66, 0, 12),
 	BackgroundColor3 = C.card,
-	Text = "–",
+	Text = "-",
 	TextColor3 = C.muted,
 	Font = Enum.Font.GothamBold,
 	TextSize = 20,
@@ -133,7 +157,7 @@ local CloseBtn = new("TextButton", {
 	Size = UDim2.new(0, 28, 0, 28),
 	Position = UDim2.new(1, -34, 0, 12),
 	BackgroundColor3 = Color3.fromRGB(60, 26, 38),
-	Text = "✕",
+	Text = "X",
 	TextColor3 = C.red,
 	Font = Enum.Font.GothamBold,
 	TextSize = 13,
@@ -141,7 +165,7 @@ local CloseBtn = new("TextButton", {
 }, Header)
 corner(CloseBtn, 8)
 
---== ПЕРЕТАСКИВАНИЕ (тач + мышь) ==--
+--== ПЕРЕТАСКИВАНИЕ ==--
 do
 	local dragging, dragStart, startPos = false, nil, nil
 	Header.InputBegan:Connect(function(i)
@@ -193,16 +217,16 @@ local function makeTab(name, icon)
 	corner(btn, 8)
 
 	local page = new("ScrollingFrame", {
-		Size = UDim2.new(1, -20, 1, -108),
+		Size = UDim2.new(1, -20, 1, -130),
 		Position = UDim2.new(0, 10, 0, 100),
 		BackgroundTransparency = 1,
 		BorderSizePixel = 0,
 		ScrollBarThickness = 3,
 		ScrollBarImageColor3 = C.violet,
 		CanvasSize = UDim2.new(0, 0, 0, 0),
-		AutomaticCanvasSize = Enum.AutomaticSize.Y,
 		Visible = false,
 	}, Main)
+	pcall(function() page.AutomaticCanvasSize = Enum.AutomaticSize.Y end)
 	new("UIListLayout", {Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder}, page)
 	new("UIPadding", {PaddingBottom = UDim.new(0, 8)}, page)
 
@@ -271,7 +295,7 @@ local function toggle(parent, title, desc, accent, callback)
 	local pill = new("Frame", {
 		Size = UDim2.new(0, 46, 0, 24),
 		Position = UDim2.new(1, -60, 0.5, -12),
-		BackgroundColor3 = Color3.fromRGB(45, 49, 72),
+		BackgroundColor3 = C.off,
 		BorderSizePixel = 0,
 	}, card)
 	corner(pill, 12)
@@ -293,7 +317,7 @@ local function toggle(parent, title, desc, accent, callback)
 	local state = false
 	hit.MouseButton1Click:Connect(function()
 		state = not state
-		tween(pill, 0.2, {BackgroundColor3 = state and accent or Color3.fromRGB(45, 49, 72)})
+		tween(pill, 0.2, {BackgroundColor3 = state and accent or C.off})
 		tween(knob, 0.2, {
 			Position = state and UDim2.new(1, -21, 0.5, -9) or UDim2.new(0, 3, 0.5, -9),
 			BackgroundColor3 = state and Color3.new(1,1,1) or C.muted,
@@ -338,7 +362,7 @@ local function slider(parent, title, min, max, default, accent, callback)
 	local track = new("Frame", {
 		Size = UDim2.new(1, -28, 0, 6),
 		Position = UDim2.new(0, 14, 0, 40),
-		BackgroundColor3 = Color3.fromRGB(45, 49, 72),
+		BackgroundColor3 = C.off,
 		BorderSizePixel = 0,
 	}, card)
 	corner(track, 3)
@@ -369,7 +393,9 @@ local function slider(parent, title, min, max, default, accent, callback)
 
 	local sliding = false
 	local function setFromX(x)
-		local rel = math.clamp((x - track.AbsolutePosition.X) / track.AbsoluteSize.X, 0, 1)
+		local w = track.AbsoluteSize.X
+		if w <= 0 then return end
+		local rel = math.clamp((x - track.AbsolutePosition.X) / w, 0, 1)
 		local v = math.floor(min + (max - min) * rel + 0.5)
 		val.Text = tostring(v)
 		fill.Size = UDim2.new(rel, 0, 1, 0)
@@ -402,9 +428,8 @@ end
 
 local bv, bg, flyConn
 local espObjects, roleObjects = {}, {}
-local killThread, gunThread, roleThread
+local killThread
 
---== FLY ==--
 local function stopFly()
 	if flyConn then flyConn:Disconnect() flyConn = nil end
 	if bv then bv:Destroy() bv = nil end
@@ -428,6 +453,7 @@ local function startFly()
 	flyConn = RunService.RenderStepped:Connect(function()
 		if not bv or not bv.Parent then return end
 		local cam = workspace.CurrentCamera
+		if not cam then return end
 		local move = hum.MoveDirection
 		local look = cam.CFrame.LookVector
 		local right = cam.CFrame.RightVector
@@ -446,7 +472,6 @@ local function startFly()
 	end)
 end
 
---== РОЛИ ИЗ ДАННЫХ ИГРЫ ==--
 local ROLE_COLORS = {
 	Murderer = C.red, Sheriff = Color3.fromRGB(60,150,255),
 	Hero = C.amber, Innocent = C.green,
@@ -481,7 +506,6 @@ local function getRoles()
 	return nil
 end
 
---== ESP ПО ОРУЖИЮ ==--
 local function clearESP()
 	for _, o in pairs(espObjects) do if o then o:Destroy() end end
 	espObjects = {}
@@ -509,8 +533,9 @@ local function updateESP()
 				if not hl or not hl.Parent then
 					hl = new("Highlight", {
 						FillTransparency = 0.55, OutlineTransparency = 0,
-						Adornee = plr.Character, DepthMode = Enum.HighlightDepthMode.AlwaysOnTop,
+						Adornee = plr.Character,
 					}, plr.Character)
+					pcall(function() hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop end)
 					espObjects[plr] = hl
 				end
 				hl.FillColor = murderer and C.red or Color3.fromRGB(60,150,255)
@@ -523,7 +548,6 @@ local function updateESP()
 	end
 end
 
---== РОЛИ НАД ГОЛОВОЙ ==--
 local function clearRoles()
 	for _, o in pairs(roleObjects) do if o then o:Destroy() end end
 	roleObjects = {}
@@ -546,7 +570,7 @@ local function updateRoles()
 					}, head)
 					new("TextLabel", {
 						Name = "T", Size = UDim2.new(1,0,1,0), BackgroundTransparency = 1,
-						Font = Enum.Font.GothamBlack, TextSize = 14,
+						Font = Enum.Font.GothamBold, TextSize = 14,
 						TextStrokeTransparency = 0, TextStrokeColor3 = Color3.new(0,0,0),
 					}, bb)
 					roleObjects[plr] = bb
@@ -561,7 +585,6 @@ local function updateRoles()
 	end
 end
 
---== KILL ALL ==--
 local function getKnife()
 	local char = LP.Character
 	if char then
@@ -620,42 +643,40 @@ local function startKillAll()
 	end)
 end
 
---== AUTO GUN ==--
-gunThread = task.spawn(function()
+task.spawn(function()
 	while Gui.Parent do
 		if S.AutoGun then
-			local drop = workspace:FindFirstChild("GunDrop")
-			local root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
-			if drop and root then
-				local old = root.CFrame
-				local cf = drop:IsA("BasePart") and drop.CFrame or (drop.PrimaryPart and drop.PrimaryPart.CFrame)
-				if cf then
-					root.CFrame = cf
-					task.wait(0.15)
-					root.CFrame = old
+			pcall(function()
+				local drop = workspace:FindFirstChild("GunDrop")
+				local root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+				if drop and root then
+					local old = root.CFrame
+					local cf = drop:IsA("BasePart") and drop.CFrame or (drop.PrimaryPart and drop.PrimaryPart.CFrame)
+					if cf then
+						root.CFrame = cf
+						task.wait(0.15)
+						root.CFrame = old
+					end
 				end
-			end
+			end)
 		end
 		task.wait(0.4)
 	end
 end)
 
---== ЦИКЛ ВИЗУАЛА ==--
-roleThread = task.spawn(function()
+task.spawn(function()
 	while Gui.Parent do
-		updateESP()
-		updateRoles()
+		pcall(updateESP)
+		pcall(updateRoles)
 		task.wait(0.5)
 	end
 end)
 
---== SPEED ==--
 local function applySpeed()
 	local h = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
 	if h then h.WalkSpeed = S.Speed and S.WalkSpeed or 16 end
 end
 
---== РЕСПАВН ==--
 LP.CharacterAdded:Connect(function()
 	task.wait(1)
 	bv, bg = nil, nil
@@ -664,7 +685,7 @@ LP.CharacterAdded:Connect(function()
 end)
 
 --============================================
---  НАПОЛНЕНИЕ ВКЛАДОК
+--  ВКЛАДКИ
 --============================================
 
 sectionLabel(PageMain, "  ДВИЖЕНИЕ")
@@ -702,12 +723,11 @@ toggle(PageMisc, "🔫 Auto Gun", "Авто-подбор пистолета", C.
 	S.AutoGun = v
 end)
 
---== ФУТЕР ==--
-local Footer = new("TextLabel", {
+new("TextLabel", {
 	Size = UDim2.new(1, 0, 0, 22),
 	Position = UDim2.new(0, 0, 1, -22),
 	BackgroundTransparency = 1,
-	Text = "LUAVERSE · v2.0",
+	Text = "LUAVERSE · v2.1",
 	TextColor3 = C.muted,
 	Font = Enum.Font.Gotham,
 	TextSize = 10,
@@ -718,7 +738,7 @@ local minimized = false
 MinBtn.MouseButton1Click:Connect(function()
 	minimized = not minimized
 	tween(Main, 0.25, {Size = minimized and UDim2.new(0, 330, 0, 52) or UDim2.new(0, 330, 0, 430)})
-	MinBtn.Text = minimized and "+" or "–"
+	MinBtn.Text = minimized and "+" or "-"
 end)
 
 --== ЗАКРЫТИЕ ==--
@@ -728,17 +748,25 @@ CloseBtn.MouseButton1Click:Connect(function()
 	clearESP()
 	clearRoles()
 	applySpeed()
-	if killThread then task.cancel(killThread) killThread = nil end
-	tween(Main, 0.2, {Size = UDim2.new(0, 330, 0, 0)})
-	task.wait(0.22)
 	Gui:Destroy()
 end)
 
---== ОТКРЫТИЕ: АНИМАЦИЯ + ПЕРВАЯ ВКЛАДКА ==--
-Main.Size = UDim2.new(0, 330, 0, 0)
-tween(Main, 0.3, {Size = UDim2.new(0, 330, 0, 430)})
+--== СТАРТОВАЯ ВКЛАДКА (без анимации размера — окно уже видно) ==--
 Tabs["Main"].BackgroundTransparency = 0
 Tabs["Main"].TextColor3 = C.text
 PageMain.Visible = true
 
-print("⚡ LUAVERSE HUB loaded")
+notify("Hub loaded ✔")
+
+end)
+
+if not ok then
+	pcall(function()
+		game:GetService("StarterGui"):SetCore("SendNotification", {
+			Title = "⚡ LUAVERSE ERROR",
+			Text = tostring(err),
+			Duration = 10,
+		})
+	end)
+	warn("[LUAVERSE ERROR] " .. tostring(err))
+end
