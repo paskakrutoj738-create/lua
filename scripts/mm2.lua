@@ -1,9 +1,8 @@
--- ⚡ LUAVERSE MM2 | Delta 100% Working Menu
+-- ⚡ LUAVERSE MM2 | EMERGENCY VERSION
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local LP = Players.LocalPlayer
 
--- Ждем персонажа и его загрузку
 local Character = LP.Character or LP.CharacterAdded:Wait()
 local Humanoid = Character:WaitForChild("Humanoid")
 local RootPart = Character:WaitForChild("HumanoidRootPart")
@@ -14,107 +13,64 @@ local isFlying = false
 local bodyVelocity, bodyGyro
 local espObjects = {}
 
--- == 1. ОЧИСТКА И СОЗДАНИЕ GUI ==
-if LP.PlayerGui:FindFirstChild("LV_HUB") then LP.PlayerGui.LV_HUB:Destroy() end
+-- == 1. СОЗДАНИЕ ЧЕРЕЗ STARTERGUI (ИНОГДА РАБОТАЕТ ЛУЧШЕ) ==
+if game.StarterGui:FindFirstChild("LV_EMERGENCY") then 
+    game.StarterGui.LV_EMERGENCY:Destroy() 
+end
 
 local Gui = Instance.new("ScreenGui")
-Gui.Name = "LV_HUB"
+Gui.Name = "LV_EMERGENCY"
 Gui.ResetOnSpawn = false
-Gui.DisplayOrder = 1000 -- Высокий приоритет отображения
+Gui.DisplayOrder = 9999 -- Максимальный приоритет
 Gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 Gui.Parent = LP.PlayerGui
 
--- Главное окно (Frame)
+-- Яркое окно, чтобы его точно было видно
 local Main = Instance.new("Frame")
-Main.Name = "Main"
-Main.Size = UDim2.new(0, 240, 0, 280)
-Main.Position = UDim2.new(0.5, -120, 0.5, -140)
-Main.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
-Main.BorderSizePixel = 2
-Main.BorderColor3 = Color3.fromRGB(100, 100, 255)
+Main.Size = UDim2.new(0, 200, 0, 200)
+Main.Position = UDim2.new(0, 50, 0, 50) -- Фиксированная позиция в углу
+Main.BackgroundColor3 = Color3.fromRGB(0, 0, 0) -- Черный фон
+Main.BorderSizePixel = 4 -- Толстая рамка
+Main.BorderColor3 = Color3.fromRGB(255, 0, 0) -- КРАСНАЯ РАМКА (чтобы видеть границы)
 Main.Active = true
 Main.Draggable = true
-Main.ClipsDescendants = true
-Main.Visible = true -- Принудительно включаем видимость
 Main.Parent = Gui
 
--- Шапка (Header)
-local Header = Instance.new("Frame")
-Header.Name = "Header"
-Header.Size = UDim2.new(1, 0, 0, 30)
-Header.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
-Header.BorderSizePixel = 0
-Header.Parent = Main
-
+-- Заголовок
 local Title = Instance.new("TextLabel")
-Title.Name = "Title"
-Title.Size = UDim2.new(1, -60, 1, 0)
-Title.Position = UDim2.new(0, 5, 0, 0)
+Title.Size = UDim2.new(1, 0, 0, 30)
 Title.BackgroundTransparency = 1
 Title.Text = "⚡ LUAVERSE"
-Title.TextColor3 = Color3.white
-Title.Font = Enum.Font.GothamBold
-Title.TextSize = 14
-Title.TextXAlignment = Enum.TextXAlignment.Left
-Title.Parent = Header
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.Font = Enum.Font.GothamBlack
+Title.TextSize = 16
+Title.Parent = Main
 
--- Кнопка закрытия (X)
-local CloseBtn = Instance.new("TextButton")
-CloseBtn.Name = "Close"
-CloseBtn.Size = UDim2.new(0, 25, 0, 25)
-CloseBtn.Position = UDim2.new(1, -28, 0, 2)
-CloseBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-CloseBtn.Text = "X"
-CloseBtn.TextColor3 = Color3.white
-CloseBtn.Font = Enum.Font.GothamBold
-CloseBtn.TextSize = 12
-CloseBtn.AutoButtonColor = false
-CloseBtn.Parent = Header
-
--- Контент (Вместо скролла используем простой Frame)
-local Content = Instance.new("Frame")
-Content.Name = "Content"
-Content.Size = UDim2.new(1, 0, 1, -30)
-Content.Position = UDim2.new(0, 0, 0, 30)
-Content.BackgroundTransparency = 1
-Content.Parent = Main
-
--- == 2. ФУНКЦИЯ СОЗДАНИЯ КНОПОК (Жесткие координаты) ==
-local function createButton(yPos, text, callback)
-    local btnFrame = Instance.new("Frame")
-    btnFrame.Size = UDim2.new(1, -10, 0, 30)
-    btnFrame.Position = UDim2.new(0, 5, 0, yPos)
-    btnFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
-    btnFrame.Parent = Content
-
-    local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(1, -40, 1, 0)
-    label.Position = UDim2.new(0, 5, 0, 0)
-    label.BackgroundTransparency = 1
-    label.Text = text
-    label.TextColor3 = Color3.white
-    label.Font = Enum.Font.Gotham
-    label.TextSize = 12
-    label.TextXAlignment = Enum.TextXAlignment.Left
-    label.Parent = btnFrame
-
-    local toggleBtn = Instance.new("TextButton")
-    toggleBtn.Size = UDim2.new(0, 30, 0, 20)
-    toggleBtn.Position = UDim2.new(1, -35, 0.5, -10)
-    toggleBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-    toggleBtn.Text = ""
-    toggleBtn.Parent = btnFrame
-
+-- Кнопки функций (Простые TextButton)
+local function addBigBtn(text, yPos, callback)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(1, -10, 0, 35)
+    btn.Position = UDim2.new(0, 5, 0, yPos)
+    btn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    btn.Text = text
+    btn.TextColor3 = Color3.white
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 14
+    btn.AutoButtonColor = true
+    btn.Parent = Main
+    
     local state = false
-    toggleBtn.MouseButton1Click:Connect(function()
+    btn.MouseButton1Click:Connect(function()
         state = not state
-        toggleBtn.BackgroundColor3 = state and Color3.fromRGB(0, 200, 100) or Color3.fromRGB(60, 60, 60)
+        btn.BackgroundColor3 = state and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(50, 50, 50)
+        btn.Text = (state and "[ON] " or "[OFF] ") .. string.gsub(text, "%[ON%] ", "")
+        btn.Text = string.gsub(btn.Text, "%[OFF%] ", "")
+        if state then btn.Text = "[ON] " .. btn.Text else btn.Text = "[OFF] " .. btn.Text end
         callback(state)
     end)
 end
 
--- == 3. ДОБАВЛЕНИЕ КНОПОК В МЕНЮ ==
-createButton(10, "✈️ No-Clip Fly", function(v)
+addBigBtn("No-Clip Fly", 40, function(v)
     isFlying = v
     if v then
         bodyVelocity = Instance.new("BodyVelocity"); bodyVelocity.MaxForce = Vector3.new(1e5,1e5,1e5); bodyVelocity.Parent = RootPart
@@ -129,18 +85,28 @@ createButton(10, "✈️ No-Clip Fly", function(v)
     end
 end)
 
-createButton(45, "👁️ ESP All Players", function(v)
+addBigBtn("ESP All", 80, function(v)
     Settings.ESP_All = v
     if not v then for _, o in pairs(espObjects) do o:Destroy() end; espObjects = {} end
 end)
 
-createButton(80, "🔫 Auto Shoot", function(v)
+addBigBtn("Auto Shoot", 120, function(v)
     Settings.AutoShoot = v
 end)
 
--- == 4. ЛОГИКА СКРИПТА ==
+-- Кнопка закрытия
+local Close = Instance.new("TextButton")
+Close.Size = UDim2.new(1, 0, 0, 30)
+Close.Position = UDim2.new(0, 0, 1, -30)
+Close.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
+Close.Text = "CLOSE MENU"
+Close.TextColor3 = Color3.white
+Close.Font = Enum.Font.GothamBlack
+Close.TextSize = 14
+Close.Parent = Main
+Close.MouseButton1Click:Connect(function() Gui:Destroy() end)
 
--- Полет
+-- == 2. ЛОГИКА (Та же самая, она работала) ==
 RunService.RenderStepped:Connect(function()
     if isFlying and bodyVelocity and RootPart then
         local moveDir = Humanoid.MoveDirection
@@ -154,7 +120,6 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- ESP
 task.spawn(function()
     while wait(0.5) do
         if Settings.ESP_All then
@@ -182,7 +147,6 @@ task.spawn(function()
     end
 end)
 
--- Auto Shoot
 RunService.RenderStepped:Connect(function()
     if Settings.AutoShoot then
         local gun = Character:FindFirstChild("Gun")
@@ -210,9 +174,4 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- Закрытие меню
-CloseBtn.MouseButton1Click:Connect(function()
-    Gui:Destroy()
-end)
-
-print("✅ Меню создано и функции загружены!")
+print("✅ EMERGENCY MENU LOADED")
