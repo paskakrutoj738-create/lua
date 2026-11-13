@@ -1,80 +1,183 @@
--- ⚡ LUAVERSE MM2 | Final Fixed Buttons
+-- ⚡ LUAVERSE MM2 HUB | Ultimate Version
+-- Fly (No-Clip) · ESP All · Auto Shoot · Kill All
+
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local LP = Players.LocalPlayer
 
+-- Ждем персонажа
 local Character = LP.Character or LP.CharacterAdded:Wait()
 local Humanoid = Character:WaitForChild("Humanoid")
 local RootPart = Character:WaitForChild("HumanoidRootPart")
 local Camera = workspace.CurrentCamera
 
-local Settings = { FlySpeed = 80, AutoShoot = false, ESP_All = true }
+local Settings = {
+    FlySpeed = 80,
+    AutoShoot = false,
+    ESP_All = true,
+    KillAll = false
+}
+
 local isFlying = false
 local bodyVelocity, bodyGyro
 local espObjects = {}
+local shootConn
 
--- == GUI ==
-if LP.PlayerGui:FindFirstChild("LV_FIX") then LP.PlayerGui.LV_FIX:Destroy() end
+-- == GUI SYSTEM ==
+if LP.PlayerGui:FindFirstChild("LV_HUB") then LP.PlayerGui.LV_HUB:Destroy() end
 
 local Gui = Instance.new("ScreenGui")
-Gui.Name = "LV_FIX"
+Gui.Name = "LV_HUB"
 Gui.ResetOnSpawn = false
 Gui.DisplayOrder = 9999
 Gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 Gui.Parent = LP.PlayerGui
 
--- Окно
+-- Main Frame
 local Main = Instance.new("Frame")
-Main.Size = UDim2.new(0, 220, 0, 250)
-Main.Position = UDim2.new(0, 50, 0, 50)
-Main.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+Main.Size = UDim2.new(0, 260, 0, 320)
+Main.Position = UDim2.new(0.5, -130, 0.5, -160)
+Main.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
 Main.BorderSizePixel = 2
-Main.BorderColor3 = Color3.fromRGB(0, 200, 255) -- Голубая рамка
+Main.BorderColor3 = Color3.fromRGB(100, 100, 255)
 Main.Active = true
 Main.Draggable = true
+Main.ClipsDescendants = true
 Main.Parent = Gui
 
--- Заголовок
-local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, 0, 0, 30)
-Title.BackgroundTransparency = 1
-Title.Text = "⚡ LUAVERSE MM2"
-Title.TextColor3 = Color3.white
-Title.Font = Enum.Font.GothamBlack
-Title.TextSize = 14
-Title.ZIndex = 10
-Title.Parent = Main
+-- Header
+local Header = Instance.new("Frame")
+Header.Size = UDim2.new(1, 0, 0, 35)
+Header.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+Header.BorderSizePixel = 0
+Header.Parent = Main
 
--- Функция создания КНОПКИ
-local function createFuncBtn(text, yPos, callback)
+Instance.new("TextLabel", {
+    Size = UDim2.new(1, -70, 1, 0), Position = UDim2.new(0, 10, 0, 0),
+    BackgroundTransparency = 1, Text = "⚡ LUAVERSE", TextColor3 = Color3.white,
+    Font = Enum.Font.GothamBold, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left, Parent = Header
+})
+
+-- Кнопки управления окном
+local function createWinBtn(text, pos, color, callback)
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1, -10, 0, 35)
-    btn.Position = UDim2.new(0, 5, 0, yPos)
-    btn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-    btn.Text = "[OFF] " .. text
+    btn.Size = UDim2.new(0, 25, 0, 25)
+    btn.Position = pos
+    btn.BackgroundColor3 = color
+    btn.Text = text
     btn.TextColor3 = Color3.white
     btn.Font = Enum.Font.GothamBold
-    btn.TextSize = 13
-    btn.AutoButtonColor = true
-    btn.ZIndex = 10 -- Важно!
-    btn.Parent = Main
-    
+    btn.TextSize = 14
+    btn.AutoButtonColor = false
+    btn.Parent = Header
+    btn.MouseButton1Click:Connect(callback)
+end
+
+createWinBtn("-", UDim2.new(1, -55, 0, 5), Color3.fromRGB(60,60,70), function()
+    if Main.Size.Y.Offset > 40 then
+        Main.Size = UDim2.new(0, 260, 0, 35) -- Свернуть
+    else
+        Main.Size = UDim2.new(0, 260, 0, 320) -- Развернуть
+    end
+end)
+
+createWinBtn("X", UDim2.new(1, -28, 0, 5), Color3.fromRGB(150,50,50), function()
+    Gui:Destroy()
+end)
+
+-- Контейнер для контента
+local Content = Instance.new("Frame")
+Content.Size = UDim2.new(1, 0, 1, -35)
+Content.Position = UDim2.new(0, 0, 0, 35)
+Content.BackgroundTransparency = 1
+Content.Parent = Main
+
+-- Вкладки
+local Tab1 = Instance.new("TextButton")
+Tab1.Size = UDim2.new(0.5, 0, 0, 25)
+Tab1.BackgroundColor3 = Color3.fromRGB(80, 80, 120)
+Tab1.Text = "Main"
+Tab1.TextColor3 = Color3.white
+Tab1.Font = Enum.Font.GothamBold
+Tab1.TextSize = 12
+Tab1.Parent = Content
+
+local Tab2 = Instance.new("TextButton")
+Tab2.Size = UDim2.new(0.5, 0, 0, 25)
+Tab2.Position = UDim2.new(0.5, 0, 0, 0)
+Tab2.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+Tab2.Text = "Combat"
+Tab2.TextColor3 = Color3.fromRGB(150,150,150)
+Tab2.Font = Enum.Font.GothamBold
+Tab2.TextSize = 12
+Tab2.Parent = Content
+
+-- Страницы
+local Page1 = Instance.new("Frame")
+Page1.Size = UDim2.new(1, 0, 1, -25)
+Page1.Position = UDim2.new(0, 0, 0, 25)
+Page1.BackgroundTransparency = 1
+Page1.Visible = true
+Page1.Parent = Content
+
+local Page2 = Instance.new("Frame")
+Page2.Size = UDim2.new(1, 0, 1, -25)
+Page2.Position = UDim2.new(0, 0, 0, 25)
+Page2.BackgroundTransparency = 1
+Page2.Visible = false
+Page2.Parent = Content
+
+-- Переключение вкладок
+Tab1.MouseButton1Click:Connect(function()
+    Page1.Visible = true; Page2.Visible = false
+    Tab1.BackgroundColor3 = Color3.fromRGB(80,80,120); Tab1.TextColor3 = Color3.white
+    Tab2.BackgroundColor3 = Color3.fromRGB(40,40,50); Tab2.TextColor3 = Color3.fromRGB(150,150,150)
+end)
+
+Tab2.MouseButton1Click:Connect(function()
+    Page1.Visible = false; Page2.Visible = true
+    Tab2.BackgroundColor3 = Color3.fromRGB(80,80,120); Tab2.TextColor3 = Color3.white
+    Tab1.BackgroundColor3 = Color3.fromRGB(40,40,50); Tab1.TextColor3 = Color3.fromRGB(150,150,150)
+end)
+
+-- Функция создания кнопки-переключателя
+local yPos = 5
+local function addToggle(parent, text, callback)
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(1, -10, 0, 30)
+    frame.Position = UDim2.new(0, 5, 0, yPos)
+    frame.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+    frame.Parent = parent
+    yPos = yPos + 35
+
+    Instance.new("TextLabel", {
+        Size = UDim2.new(1, -40, 1, 0), Position = UDim2.new(0, 5, 0, 0),
+        BackgroundTransparency = 1, Text = text, TextColor3 = Color3.white,
+        Font = Enum.Font.Gotham, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left, Parent = frame
+    })
+
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0, 30, 0, 20)
+    btn.Position = UDim2.new(1, -35, 0.5, -10)
+    btn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    btn.Text = ""
+    btn.Parent = frame
+
     local state = false
     btn.MouseButton1Click:Connect(function()
         state = not state
-        if state then
-            btn.Text = "[ON]  " .. text
-            btn.BackgroundColor3 = Color3.fromRGB(0, 150, 100) -- Зеленый при включении
-        else
-            btn.Text = "[OFF] " .. text
-            btn.BackgroundColor3 = Color3.fromRGB(40, 40, 50) -- Серый при выключении
-        end
+        btn.BackgroundColor3 = state and Color3.fromRGB(0, 200, 100) or Color3.fromRGB(60, 60, 60)
         callback(state)
     end)
 end
 
--- == СОЗДАЕМ КНОПКИ ==
-createFuncBtn("No-Clip Fly", 40, function(v)
+-- == ЗАПОЛНЕНИЕ ВКЛАДОК ==
+yPos = 5
+
+-- Вкладка 1: Движение
+addToggle(Page1, "✈️ No-Clip Fly", function(v)
     isFlying = v
     if v then
         bodyVelocity = Instance.new("BodyVelocity"); bodyVelocity.MaxForce = Vector3.new(1e5,1e5,1e5); bodyVelocity.Parent = RootPart
@@ -89,29 +192,25 @@ createFuncBtn("No-Clip Fly", 40, function(v)
     end
 end)
 
-createFuncBtn("ESP All Players", 80, function(v)
+yPos = 5
+
+-- Вкладка 2: Бой и Визуал
+addToggle(Page2, "👁️ ESP All", function(v)
     Settings.ESP_All = v
     if not v then for _, o in pairs(espObjects) do o:Destroy() end; espObjects = {} end
 end)
 
-createFuncBtn("Auto Shoot", 120, function(v)
+addToggle(Page2, "🔫 Auto Shoot", function(v)
     Settings.AutoShoot = v
 end)
 
--- Кнопка закрытия
-local Close = Instance.new("TextButton")
-Close.Size = UDim2.new(1, 0, 0, 30)
-Close.Position = UDim2.new(0, 0, 1, -30)
-Close.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
-Close.Text = "CLOSE"
-Close.TextColor3 = Color3.white
-Close.Font = Enum.Font.GothamBlack
-Close.TextSize = 14
-Close.ZIndex = 10
-Close.Parent = Main
-Close.MouseButton1Click:Connect(function() Gui:Destroy() end)
+addToggle(Page2, "💀 Kill All", function(v)
+    Settings.KillAll = v
+end)
 
--- == ЛОГИКА (Работает в фоне) ==
+-- == ЛОГИКА СКРИПТА ==
+
+-- Полет
 RunService.RenderStepped:Connect(function()
     if isFlying and bodyVelocity and RootPart then
         local moveDir = Humanoid.MoveDirection
@@ -125,6 +224,7 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
+-- ESP
 task.spawn(function()
     while wait(0.5) do
         if Settings.ESP_All then
@@ -152,8 +252,9 @@ task.spawn(function()
     end
 end)
 
-RunService.RenderStepped:Connect(function()
-    if Settings.AutoShoot then
+-- Auto Shoot & Kill All
+shootConn = RunService.RenderStepped:Connect(function()
+    if Settings.AutoShoot or Settings.KillAll then
         local gun = Character:FindFirstChild("Gun")
         if gun and gun:IsA("Tool") then
             local nearest, dist = nil, math.huge
@@ -179,4 +280,4 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
-print("✅ Кнопки созданы. Нажимай на них!")
+print("✅ LUAVERSE MM2 Loaded")
