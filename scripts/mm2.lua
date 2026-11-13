@@ -1,4 +1,4 @@
--- ⚡ LUAVERSE MM2 | 3-BUTTON STABLE VERSION
+-- ⚡ LUAVERSE MM2 | Final Fixed Buttons
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local LP = Players.LocalPlayer
@@ -14,68 +14,67 @@ local bodyVelocity, bodyGyro
 local espObjects = {}
 
 -- == GUI ==
-if LP.PlayerGui:FindFirstChild("LV_SIMPLE") then LP.PlayerGui.LV_SIMPLE:Destroy() end
+if LP.PlayerGui:FindFirstChild("LV_FIX") then LP.PlayerGui.LV_FIX:Destroy() end
 
 local Gui = Instance.new("ScreenGui")
-Gui.Name = "LV_SIMPLE"
+Gui.Name = "LV_FIX"
 Gui.ResetOnSpawn = false
 Gui.DisplayOrder = 9999
+Gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 Gui.Parent = LP.PlayerGui
 
 -- Окно
 local Main = Instance.new("Frame")
-Main.Size = UDim2.new(0, 200, 0, 180)
+Main.Size = UDim2.new(0, 220, 0, 250)
 Main.Position = UDim2.new(0, 50, 0, 50)
-Main.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+Main.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
 Main.BorderSizePixel = 2
-Main.BorderColor3 = Color3.fromRGB(100, 100, 255)
+Main.BorderColor3 = Color3.fromRGB(0, 200, 255) -- Голубая рамка
 Main.Active = true
 Main.Draggable = true
 Main.Parent = Gui
 
 -- Заголовок
-Instance.new("TextLabel", {
-    Size = UDim2.new(1, 0, 0, 25),
-    BackgroundTransparency = 1,
-    Text = "⚡ LUAVERSE MM2",
-    TextColor3 = Color3.white,
-    Font = Enum.Font.GothamBold,
-    TextSize = 14,
-    Parent = Main
-})
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, 0, 0, 30)
+Title.BackgroundTransparency = 1
+Title.Text = "⚡ LUAVERSE MM2"
+Title.TextColor3 = Color3.white
+Title.Font = Enum.Font.GothamBlack
+Title.TextSize = 14
+Title.ZIndex = 10
+Title.Parent = Main
 
--- Функция создания простой кнопки
-local function createSimpleBtn(text, yPos, callback)
+-- Функция создания КНОПКИ
+local function createFuncBtn(text, yPos, callback)
     local btn = Instance.new("TextButton")
     btn.Size = UDim2.new(1, -10, 0, 35)
     btn.Position = UDim2.new(0, 5, 0, yPos)
-    btn.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
-    btn.Text = text
+    btn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+    btn.Text = "[OFF] " .. text
     btn.TextColor3 = Color3.white
     btn.Font = Enum.Font.GothamBold
-    btn.TextSize = 14
-    btn.AutoButtonColor = true -- Включает затемнение при нажатии
+    btn.TextSize = 13
+    btn.AutoButtonColor = true
+    btn.ZIndex = 10 -- Важно!
     btn.Parent = Main
-
+    
     local state = false
     btn.MouseButton1Click:Connect(function()
         state = not state
-        -- Меняем цвет кнопки чтобы было видно состояние
         if state then
-            btn.BackgroundColor3 = Color3.fromRGB(0, 150, 50) -- Зеленый
-            btn.Text = "✅ " .. string.gsub(text, "❌ ", "")
+            btn.Text = "[ON]  " .. text
+            btn.BackgroundColor3 = Color3.fromRGB(0, 150, 100) -- Зеленый при включении
         else
-            btn.BackgroundColor3 = Color3.fromRGB(50, 50, 60) -- Серый
-            btn.Text = "❌ " .. string.gsub(text, "✅ ", "")
+            btn.Text = "[OFF] " .. text
+            btn.BackgroundColor3 = Color3.fromRGB(40, 40, 50) -- Серый при выключении
         end
         callback(state)
     end)
 end
 
--- == СОЗДАЕМ 3 КНОПКИ ==
-
--- 1. ПОЛЕТ
-createSimpleBtn("❌ No-Clip Fly", 30, function(v)
+-- == СОЗДАЕМ КНОПКИ ==
+createFuncBtn("No-Clip Fly", 40, function(v)
     isFlying = v
     if v then
         bodyVelocity = Instance.new("BodyVelocity"); bodyVelocity.MaxForce = Vector3.new(1e5,1e5,1e5); bodyVelocity.Parent = RootPart
@@ -90,32 +89,29 @@ createSimpleBtn("❌ No-Clip Fly", 30, function(v)
     end
 end)
 
--- 2. ESP
-createSimpleBtn("❌ ESP All", 70, function(v)
+createFuncBtn("ESP All Players", 80, function(v)
     Settings.ESP_All = v
     if not v then for _, o in pairs(espObjects) do o:Destroy() end; espObjects = {} end
 end)
 
--- 3. АВТОСТРЕЛ
-createSimpleBtn("❌ Auto Shoot", 110, function(v)
+createFuncBtn("Auto Shoot", 120, function(v)
     Settings.AutoShoot = v
 end)
 
 -- Кнопка закрытия
 local Close = Instance.new("TextButton")
-Close.Size = UDim2.new(1, 0, 0, 25)
-Close.Position = UDim2.new(0, 0, 1, -25)
+Close.Size = UDim2.new(1, 0, 0, 30)
+Close.Position = UDim2.new(0, 0, 1, -30)
 Close.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
 Close.Text = "CLOSE"
 Close.TextColor3 = Color3.white
 Close.Font = Enum.Font.GothamBlack
-Close.TextSize = 12
+Close.TextSize = 14
+Close.ZIndex = 10
 Close.Parent = Main
 Close.MouseButton1Click:Connect(function() Gui:Destroy() end)
 
--- == ЛОГИКА ==
-
--- Полет
+-- == ЛОГИКА (Работает в фоне) ==
 RunService.RenderStepped:Connect(function()
     if isFlying and bodyVelocity and RootPart then
         local moveDir = Humanoid.MoveDirection
@@ -129,7 +125,6 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- ESP
 task.spawn(function()
     while wait(0.5) do
         if Settings.ESP_All then
@@ -157,7 +152,6 @@ task.spawn(function()
     end
 end)
 
--- Автострел
 RunService.RenderStepped:Connect(function()
     if Settings.AutoShoot then
         local gun = Character:FindFirstChild("Gun")
@@ -185,4 +179,4 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
-print("✅ 3-BUTTON MENU LOADED")
+print("✅ Кнопки созданы. Нажимай на них!")
