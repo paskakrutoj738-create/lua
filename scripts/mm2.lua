@@ -1,5 +1,5 @@
--- ⚡ LUAVERSE MM2 HUB | Ultimate Version
--- Fly (No-Clip) · ESP All · Auto Shoot
+-- ⚡ LUAVERSE MM2 HUB | Ultimate Version v3.0
+-- Fly (No-Clip) · ESP All · Auto Shoot · Auto-Farm Coins
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -15,7 +15,8 @@ local S = {
 	Fly = false, FlySpeed = 80,
 	ESP_All = true,
 	AutoShoot = false,
-	KillAll = false
+	KillAll = false,
+    FarmCoins = false
 }
 
 --== ПАЛИТРА ==--
@@ -223,6 +224,7 @@ end
 local PageMain = makeTab("Main", "🎮")
 local PageVisual = makeTab("Visual", "👁")
 local PageCombat = makeTab("Combat", "⚔")
+local PageFarm = makeTab("Farm", "🪙")
 
 --== ЭЛЕМЕНТЫ UI ==--
 local function sectionLabel(parent, text)
@@ -402,7 +404,7 @@ end
 
 local bv, bg, flyConn
 local espObjects = {}
-local shootConn
+local shootConn, farmConn
 
 --== FLY (NO-CLIP) ==--
 local function stopFly()
@@ -412,7 +414,6 @@ local function stopFly()
 	local h = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
 	if h then 
         h.PlatformStand = false 
-        -- Возвращаем коллизию
         for _, part in pairs(LP.Character:GetDescendants()) do
             if part:IsA("BasePart") then part.CanCollide = true end
         end
@@ -431,7 +432,6 @@ local function startFly()
 	bg = new("BodyGyro", {MaxTorque = Vector3.new(1e5,1e5,1e5), P = 9000, CFrame = root.CFrame}, root)
 	hum.PlatformStand = true
 	
-	-- Включаем No-Clip
 	for _, part in pairs(char:GetDescendants()) do
 		if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then 
 			part.CanCollide = false 
@@ -444,7 +444,6 @@ local function startFly()
 		local move = hum.MoveDirection
 		local look = cam.CFrame.LookVector
 		
-		-- Умное управление: летим туда, куда смотрим
 		local fL = Vector3.new(look.X, 0, look.Z)
 		if fL.Magnitude > 0 then fL = fL.Unit end
 
@@ -481,7 +480,6 @@ local function updateESP()
 				end
 				
 				local hl = espObjects[plr]
-				-- Проверка оружия
 				local isMurderer = plr.Character:FindFirstChild("Knife") or (plr.Backpack and plr.Backpack:FindFirstChild("Knife"))
 				local isSheriff = plr.Character:FindFirstChild("Gun") or (plr.Backpack and plr.Backpack:FindFirstChild("Gun"))
 				
@@ -490,7 +488,7 @@ local function updateESP()
 				elseif isSheriff then
 					hl.FillColor = Color3.fromRGB(60, 150, 255)
 				else
-					hl.FillColor = C.green -- Мирные зеленые
+					hl.FillColor = C.green
 				end
 			end
 		end
@@ -515,7 +513,6 @@ shootConn = RunService.RenderStepped:Connect(function()
 			local nearest, dist = nil, math.huge
 			for _, plr in pairs(Players:GetPlayers()) do
 				if plr ~= LP and plr.Character then
-					-- Ищем убийцу для автошота или любого игрока для Kill All
 					local isTarget = false
 					if S.AutoShoot then
 						isTarget = plr.Character:FindFirstChild("Knife") or (plr.Backpack and plr.Backpack:FindFirstChild("Knife"))
@@ -544,6 +541,48 @@ shootConn = RunService.RenderStepped:Connect(function()
 			end
 		end
 	end
+end)
+
+--== AUTO FARM COINS ==--
+local function findNearestCoin()
+    local nearestCoin = nil
+    local minDist = math.huge
+    
+    for _, obj in pairs(workspace:GetDescendants()) do
+        if obj.Name == "Coin" and obj:IsA("BasePart") then
+            local char = LP.Character
+            if char and char:FindFirstChild("HumanoidRootPart") then
+                local dist = (char.HumanoidRootPart.Position - obj.Position).Magnitude
+                if dist < minDist and dist < 200 then
+                    minDist = dist
+                    nearestCoin = obj
+                end
+            end
+        end
+    end
+    return nearestCoin
+end
+
+farmConn = RunService.RenderStepped:Connect(function()
+    if not S.FarmCoins then return end
+    
+    local char = LP.Character
+    if not char then return end
+    
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    local root = char:FindFirstChild("HumanoidRootPart")
+    
+    if hum and root then
+        hum.WalkSpeed = 25
+        
+        local coin = findNearestCoin()
+        if coin then
+            local direction = (coin.Position - root.Position).Unit
+            hum:Move(direction * Vector3.new(1, 0, 1))
+        else
+            hum:Move(Vector3.new(0, 0, 0))
+        end
+    end
 end)
 
 --== РЕСПАВН ==--
@@ -577,6 +616,11 @@ toggle(PageCombat, "💀 Kill All", "Убивать всех подряд", C.am
 	S.KillAll = v
 end)
 
+sectionLabel(PageFarm, "  ФАРМ")
+toggle(PageFarm, "🪙 Auto-Farm Coins", "Автосбор монеток", C.green, function(v)
+    S.FarmCoins = v
+end)
+
 --== ФУТЕР ==--
 local Footer = new("TextLabel", {
 	Size = UDim2.new(1, 0, 0, 22),
@@ -598,7 +642,7 @@ end)
 
 --== ЗАКРЫТИЕ ==--
 CloseBtn.MouseButton1Click:Connect(function()
-	S.Fly = false; S.ESP_All = false; S.AutoShoot = false; S.KillAll = false
+	S.Fly = false; S.ESP_All = false; S.AutoShoot = false; S.KillAll = false; S.FarmCoins = false
 	stopFly()
 	for _, o in pairs(espObjects) do if o then o:Destroy() end end
 	Gui:Destroy()
