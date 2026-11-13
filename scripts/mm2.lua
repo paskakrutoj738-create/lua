@@ -1,189 +1,268 @@
--- ⚡ LUAVERSE MM2 | Weapon ESP & No-Clip Fly
+-- ⚡ LUAVERSE MM2 | Ultimate Hub
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
 local LP = Players.LocalPlayer
 
+-- Ждем загрузки
+local Character = LP.Character or LP.CharacterAdded:Wait()
+local Humanoid = Character:WaitForChild("Humanoid")
+local RootPart = Character:WaitForChild("HumanoidRootPart")
+local Camera = workspace.CurrentCamera
+
+-- Настройки
 local Settings = {
     FlySpeed = 80,
-    Color_Murderer = Color3.fromRGB(255, 50, 50), -- Ярко-красный
-    Color_Sheriff = Color3.fromRGB(50, 150, 255), -- Ярко-синий
+    AutoShoot = false,
+    ESP_All = true
 }
 
 local isFlying = false
 local bodyVelocity, bodyGyro
-local espObjects = {} -- Таблица для хранения подсветки
+local espObjects = {}
+local shootConn
 
--- == ФУНКЦИЯ ПРОВЕРКИ ОРУЖИЯ ==
-local function checkWeapons()
+-- == GUI SYSTEM ==
+if LP.PlayerGui:FindFirstChild("LV_HUB") then LP.PlayerGui.LV_HUB:Destroy() end
+
+local Gui = Instance.new("ScreenGui")
+Gui.Name = "LV_HUB"
+Gui.ResetOnSpawn = false
+Gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+Gui.Parent = LP.PlayerGui
+
+-- Main Frame
+local Main = Instance.new("Frame")
+Main.Size = UDim2.new(0, 280, 0, 350)
+Main.Position = UDim2.new(0.5, -140, 0.5, -175)
+Main.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+Main.BorderSizePixel = 0
+Main.Active = true
+Main.Draggable = true -- Встроенное перетаскивание
+Main.Parent = Gui
+Instance.new("UICorner", {CornerRadius = UDim.new(0, 12), Parent = Main})
+Instance.new("UIStroke", {Color = Color3.fromRGB(100, 100, 255), Thickness = 1, Parent = Main})
+
+-- Header
+local Header = Instance.new("Frame")
+Header.Size = UDim2.new(1, 0, 0, 40)
+Header.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
+Header.BorderSizePixel = 0
+Header.Parent = Main
+Instance.new("UICorner", {CornerRadius = UDim.new(0, 12), Parent = Header})
+Instance.new("Frame", {Size = UDim2.new(1,0,0,12), Position = UDim2.new(0,0,1,-12), BackgroundColor3 = Color3.fromRGB(30,30,45), BorderSizePixel=0, Parent = Header})
+
+Instance.new("TextLabel", {
+    Size = UDim2.new(1,0,1,0), BackgroundTransparency = 1,
+    Text = "⚡ LUAVERSE MM2", TextColor3 = Color3.white,
+    Font = Enum.Font.GothamBold, TextSize = 16, Parent = Header
+})
+
+-- Tabs
+local TabFrame = Instance.new("Frame")
+TabFrame.Size = UDim2.new(1, -10, 0, 30)
+TabFrame.Position = UDim2.new(0, 5, 0, 45)
+TabFrame.BackgroundTransparency = 1
+TabFrame.Parent = Main
+
+local ContentFrame = Instance.new("ScrollingFrame")
+ContentFrame.Size = UDim2.new(1, -10, 1, -90)
+ContentFrame.Position = UDim2.new(0, 5, 0, 80)
+ContentFrame.BackgroundTransparency = 1
+ContentFrame.BorderSizePixel = 0
+ContentFrame.ScrollBarThickness = 4
+ContentFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+ContentFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
+ContentFrame.Parent = Main
+Instance.new("UIListLayout", {Padding = UDim.new(0, 5), SortOrder = Enum.SortOrder.LayoutOrder, Parent = ContentFrame})
+
+local function createTab(name, xPos)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0.5, -2, 1, 0)
+    btn.Position = UDim2.new(xPos, 0, 0, 0)
+    btn.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+    btn.Text = name
+    btn.TextColor3 = Color3.white
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 12
+    btn.AutoButtonColor = false
+    btn.Parent = TabFrame
+    Instance.new("UICorner", {CornerRadius = UDim.new(0, 6), Parent = btn})
+    
+    local page = Instance.new("Frame")
+    page.Size = UDim2.new(1, 0, 1, 0)
+    page.BackgroundTransparency = 1
+    page.Visible = (xPos == 0)
+    page.Parent = ContentFrame
+    Instance.new("UIListLayout", {Padding = UDim.new(0, 5), SortOrder = Enum.SortOrder.LayoutOrder, Parent = page})
+
+    btn.MouseButton1Click:Connect(function()
+        for _, child in pairs(TabFrame:GetChildren()) do
+            if child:IsA("TextButton") then child.BackgroundColor3 = Color3.fromRGB(40,40,55) end
+        end
+        btn.BackgroundColor3 = Color3.fromRGB(80, 80, 150)
+        for _, p in pairs(ContentFrame:GetChildren()) do
+            if p:IsA("Frame") then p.Visible = false end
+        end
+        page.Visible = true
+    end)
+    
+    if xPos == 0 then btn.BackgroundColor3 = Color3.fromRGB(80, 80, 150) end
+    return page
+end
+
+local Page1 = createTab("Movement", 0)
+local Page2 = createTab("Visual", 0.5)
+local Page3 = createTab("Combat", 1) -- Исправлено для 3 вкладок, но пока оставим 2 для простоты, добавим в Page2
+
+-- UI Helpers
+local function addToggle(parent, text, callback)
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(1, 0, 0, 30)
+    frame.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
+    frame.Parent = parent
+    Instance.new("UICorner", {CornerRadius = UDim.new(0, 6), Parent = frame})
+    
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(1, -40, 1, 0)
+    label.Position = UDim2.new(0, 5, 0, 0)
+    label.BackgroundTransparency = 1
+    label.Text = text
+    label.TextColor3 = Color3.white
+    label.Font = Enum.Font.Gotham
+    label.TextSize = 12
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.Parent = frame
+    
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0, 30, 0, 20)
+    btn.Position = UDim2.new(1, -35, 0.5, -10)
+    btn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    btn.Text = ""
+    btn.Parent = frame
+    Instance.new("UICorner", {CornerRadius = UDim.new(0, 4), Parent = btn})
+    
+    local state = false
+    btn.MouseButton1Click:Connect(function()
+        state = not state
+        btn.BackgroundColor3 = state and Color3.fromRGB(0, 200, 100) or Color3.fromRGB(60, 60, 60)
+        callback(state)
+    end)
+end
+
+-- == MOVEMENT ==
+addToggle(Page1, "✈️ No-Clip Fly", function(v)
+    isFlying = v
+    if v then
+        -- Start Fly Logic
+        bodyVelocity = Instance.new("BodyVelocity")
+        bodyVelocity.MaxForce = Vector3.new(1e5,1e5,1e5)
+        bodyVelocity.Parent = RootPart
+        
+        bodyGyro = Instance.new("BodyGyro")
+        bodyGyro.MaxTorque = Vector3.new(1e5,1e5,1e5)
+        bodyGyro.P = 9000
+        bodyGyro.Parent = RootPart
+        
+        Humanoid.PlatformStand = true
+        for _, p in pairs(Character:GetDescendants()) do
+            if p:IsA("BasePart") and p.Name ~= "HumanoidRootPart" then p.CanCollide = false end
+        end
+    else
+        -- Stop Fly Logic
+        if bodyVelocity then bodyVelocity:Destroy() end
+        if bodyGyro then bodyGyro:Destroy() end
+        Humanoid.PlatformStand = false
+        for _, p in pairs(Character:GetDescendants()) do
+            if p:IsA("BasePart") then p.CanCollide = true end
+        end
+    end
+end)
+
+-- == VISUAL (ESP FOR ALL) ==
+addToggle(Page2, "👁️ ESP All Players", function(v)
+    Settings.ESP_All = v
+    if not v then
+        for _, obj in pairs(espObjects) do obj:Destroy() end
+        espObjects = {}
+    end
+end)
+
+local function updateESP()
+    if not Settings.ESP_All then return end
+    
     for _, plr in pairs(Players:GetPlayers()) do
         if plr ~= LP and plr.Character then
             local root = plr.Character:FindFirstChild("HumanoidRootPart")
             if root then
-                local isMurderer = false
-                local isSheriff = false
-
-                -- Проверяем Character (руки) и Backpack
-                local containers = {plr.Character, plr:FindFirstChildOfClass("Backpack")}
-                
-                for _, container in pairs(containers) do
-                    if container then
-                        for _, item in pairs(container:GetChildren()) do
-                            if item:IsA("Tool") then
-                                if item.Name == "Knife" then isMurderer = true end
-                                if item.Name == "Gun" then isSheriff = true end
-                            end
-                        end
-                    end
+                if not espObjects[plr] then
+                    local hl = Instance.new("Highlight")
+                    hl.FillTransparency = 0.7
+                    hl.OutlineTransparency = 0.2
+                    hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+                    hl.Adornee = plr.Character
+                    hl.Parent = plr.Character
+                    espObjects[plr] = hl
                 end
-
-                -- Логика создания/обновления ESP
-                if isMurderer or isSheriff then
-                    if not espObjects[plr] then
-                        -- Создаем BoxHandle (работает везде)
-                        local box = Instance.new("BoxHandleAdornment")
-                        box.Size = Vector3.new(4, 6, 2)
-                        box.Transparency = 0.6
-                        box.AlwaysOnTop = true -- Видно сквозь стены!
-                        box.Adornee = root
-                        box.ZIndex = 5
-                        box.Parent = root
-                        
-                        -- Создаем текст над головой
-                        local bill = Instance.new("BillboardGui")
-                        bill.Name = "LV_Tag"
-                        bill.Size = UDim2.new(0, 120, 0, 30)
-                        bill.StudsOffset = Vector3.new(0, 4, 0)
-                        bill.AlwaysOnTop = true
-                        bill.Adornee = root
-                        
-                        local label = Instance.new("TextLabel")
-                        label.Size = UDim2.new(1,0,1,0)
-                        label.BackgroundTransparency = 1
-                        label.Font = Enum.Font.GothamBold
-                        label.TextSize = 16
-                        label.TextStrokeTransparency = 0
-                        label.TextColor3 = Color3.white
-                        label.Parent = bill
-                        
-                        espObjects[plr] = {Box = box, Tag = bill}
-                    end
-                    
-                    -- Обновляем цвет и текст
-                    local objs = espObjects[plr]
-                    if isMurderer then
-                        objs.Box.Color3 = Settings.Color_Murderer
-                        objs.Tag:FindFirstChild("TextLabel").Text = "MURDERER"
-                        objs.Tag:FindFirstChild("TextLabel").TextColor3 = Settings.Color_Murderer
-                    else
-                        objs.Box.Color3 = Settings.Color_Sheriff
-                        objs.Tag:FindFirstChild("TextLabel").Text = "SHERIFF"
-                        objs.Tag:FindFirstChild("TextLabel").TextColor3 = Settings.Color_Sheriff
-                    end
+                
+                local hl = espObjects[plr]
+                local isMurderer = plr.Character:FindFirstChild("Knife") or (plr.Backpack and plr.Backpack:FindFirstChild("Knife"))
+                local isSheriff = plr.Character:FindFirstChild("Gun") or (plr.Backpack and plr.Backpack:FindFirstChild("Gun"))
+                
+                if isMurderer then
+                    hl.FillColor = Color3.fromRGB(255, 50, 50) -- Red
+                elseif isSheriff then
+                    hl.FillColor = Color3.fromRGB(50, 150, 255) -- Blue
                 else
-                    -- Если оружия нет, удаляем подсветку
-                    if espObjects[plr] then
-                        espObjects[plr].Box:Destroy()
-                        espObjects[plr].Tag:Destroy()
-                        espObjects[plr] = nil
-                    end
+                    hl.FillColor = Color3.fromRGB(50, 255, 100) -- Green (Innocent)
                 end
             end
         end
     end
 end
+task.spawn(function() while wait(0.5) do pcall(updateESP) end end)
 
--- Запуск проверки оружия каждые 0.3 сек
-task.spawn(function()
-    while wait(0.3) do
-        pcall(checkWeapons)
-    end
+-- == COMBAT (AUTO SHOOT) ==
+addToggle(Page3, "🔫 Auto Shoot (Sheriff)", function(v)
+    Settings.AutoShoot = v
+    if not v and shootConn then shootConn:Disconnect() end
 end)
 
--- == NO-CLIP FLY ==
-local function setNoClip(enabled)
-    local char = LP.Character
-    if not char then return end
-    for _, part in pairs(char:GetDescendants()) do
-        if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
-            part.CanCollide = not enabled
+shootConn = RunService.RenderStepped:Connect(function()
+    if Settings.AutoShoot then
+        local gun = Character:FindFirstChild("Gun")
+        if gun and gun:IsA("Tool") then
+            -- Find nearest Murderer
+            local nearestPlr, nearestDist = nil, math.huge
+            for _, plr in pairs(Players:GetPlayers()) do
+                if plr ~= LP and plr.Character then
+                    local hasKnife = plr.Character:FindFirstChild("Knife") or (plr.Backpack and plr.Backpack:FindFirstChild("Knife"))
+                    if hasKnife then
+                        local targetRoot = plr.Character:FindFirstChild("HumanoidRootPart")
+                        if targetRoot then
+                            local dist = (RootPart.Position - targetRoot.Position).Magnitude
+                            if dist < nearestDist and dist < 50 then -- Range 50 studs
+                                nearestDist = dist
+                                nearestPlr = plr
+                            end
+                        end
+                    end
+                end
+            end
+            
+            if nearestPlr then
+                -- Aim at murderer
+                local targetRoot = nearestPlr.Character:FindFirstChild("HumanoidRootPart")
+                Camera.CFrame = CFrame.lookAt(RootPart.Position, targetRoot.Position)
+                
+                -- Shoot
+                pcall(function()
+                    gun:Activate()
+                    wait(0.4) -- Fire rate
+                end)
+            end
         end
     end
-end
-
-local function stopFly()
-    isFlying = false
-    setNoClip(false)
-    if bodyVelocity then bodyVelocity:Destroy() bodyVelocity = nil end
-    if bodyGyro then bodyGyro:Destroy() bodyGyro = nil end
-    local hum = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
-    if hum then hum.PlatformStand = false end
-    if btn then btn.Text = "FLY: OFF"; btn.BackgroundColor3 = Color3.fromRGB(60, 60, 75) end
-end
-
-local function startFly()
-    local char = LP.Character
-    if not char then return end
-    local hum = char:FindFirstChildOfClass("Humanoid")
-    local root = char:FindFirstChild("HumanoidRootPart")
-    if not hum or not root then return end
-
-    stopFly()
-    isFlying = true
-    setNoClip(true)
-    
-    bodyVelocity = Instance.new("BodyVelocity")
-    bodyVelocity.MaxForce = Vector3.new(1e5, 1e5, 1e5)
-    bodyVelocity.Parent = root
-
-    bodyGyro = Instance.new("BodyGyro")
-    bodyGyro.MaxTorque = Vector3.new(1e5, 1e5, 1e5)
-    bodyGyro.P = 9000
-    bodyGyro.Parent = root
-
-    hum.PlatformStand = true
-    if btn then btn.Text = "FLY: ON"; btn.BackgroundColor3 = Color3.fromRGB(0, 160, 90) end
-
-    RunService.RenderStepped:Connect(function()
-        if not isFlying or not bodyVelocity or not root then return end
-        local camera = workspace.CurrentCamera
-        local moveDir = hum.MoveDirection
-        local camLook = camera.CFrame.LookVector
-        
-        if moveDir.Magnitude > 0.1 then
-            bodyVelocity.Velocity = camLook.Unit * Settings.FlySpeed * moveDir.Magnitude
-            bodyGyro.CFrame = CFrame.lookAt(root.Position, root.Position + camLook.Unit)
-        else
-            bodyVelocity.Velocity = Vector3.zero
-        end
-    end)
-end
-
--- GUI
-if LP.PlayerGui:FindFirstChild("LUAVERSE_HUB") then LP.PlayerGui.LUAVERSE_HUB:Destroy() end
-local Gui = Instance.new("ScreenGui")
-Gui.Name = "LUAVERSE_HUB"
-Gui.ResetOnSpawn = false
-Gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-Gui.Parent = LP.PlayerGui
-
-local btn = Instance.new("TextButton")
-btn.Size = UDim2.new(0, 140, 0, 50)
-btn.Position = UDim2.new(0, 15, 1, -70)
-btn.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
-btn.TextColor3 = Color3.new(1, 1, 1)
-btn.Text = "FLY: OFF"
-btn.Font = Enum.Font.GothamBold
-btn.TextSize = 16
-btn.Parent = Gui
-Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 12)
-
-btn.MouseButton1Click:Connect(function()
-    if isFlying then stopFly() else startFly() end
 end)
 
-LP.CharacterAdded:Connect(function()
-    wait(1)
-    if isFlying then startFly() end
-end)
-
-print("✅ LUAVERSE MM2 Loaded (Weapon ESP)")
+print("✅ LUAVERSE MM2 Loaded")
