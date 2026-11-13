@@ -1,283 +1,614 @@
 -- ⚡ LUAVERSE MM2 HUB | Ultimate Version
--- Fly (No-Clip) · ESP All · Auto Shoot · Kill All
+-- Fly (No-Clip) · ESP All · Auto Shoot
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local LP = Players.LocalPlayer
 
--- Ждем персонажа
-local Character = LP.Character or LP.CharacterAdded:Wait()
-local Humanoid = Character:WaitForChild("Humanoid")
-local RootPart = Character:WaitForChild("HumanoidRootPart")
+local LP = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
-local Settings = {
-    FlySpeed = 80,
-    AutoShoot = false,
-    ESP_All = true,
-    KillAll = false
+--== НАСТРОЙКИ ==--
+local S = {
+	Fly = false, FlySpeed = 80,
+	ESP_All = true,
+	AutoShoot = false,
+	KillAll = false
 }
 
-local isFlying = false
-local bodyVelocity, bodyGyro
+--== ПАЛИТРА ==--
+local C = {
+	bg      = Color3.fromRGB(14, 16, 28),
+	panel   = Color3.fromRGB(20, 23, 38),
+	card    = Color3.fromRGB(27, 31, 50),
+	stroke  = Color3.fromRGB(58, 64, 96),
+	text    = Color3.fromRGB(238, 241, 255),
+	muted   = Color3.fromRGB(140, 148, 180),
+	violet  = Color3.fromRGB(139, 92, 246),
+	cyan    = Color3.fromRGB(34, 211, 238),
+	green   = Color3.fromRGB(52, 211, 153),
+	red     = Color3.fromRGB(251, 80, 110),
+	amber   = Color3.fromRGB(251, 191, 36),
+}
+
+local function new(class, props, parent)
+	local o = Instance.new(class)
+	for k, v in pairs(props) do pcall(function() o[k] = v end) end
+	if parent then o.Parent = parent end
+	return o
+end
+
+local function corner(o, r) return new("UICorner", {CornerRadius = UDim.new(0, r or 10)}, o) end
+local function stroke(o, col, t)
+	return new("UIStroke", {Color = col or C.stroke, Thickness = t or 1, Transparency = 0.4}, o)
+end
+local function tween(o, t, props)
+	pcall(function()
+		TweenService:Create(o, TweenInfo.new(t, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), props):Play()
+	end)
+end
+
+--== ОЧИСТКА СТАРОГО GUI ==--
+local old = LP.PlayerGui:FindFirstChild("LUAVERSE_HUB")
+if old then old:Destroy() end
+
+local Gui = new("ScreenGui", {
+	Name = "LUAVERSE_HUB",
+	ResetOnSpawn = false,
+	ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+	DisplayOrder = 999,
+}, LP.PlayerGui)
+
+--== ГЛАВНОЕ ОКНО ==--
+local Main = new("Frame", {
+	Size = UDim2.new(0, 330, 0, 430),
+	Position = UDim2.new(0.5, -165, 0.5, -215),
+	BackgroundColor3 = C.bg,
+	BorderSizePixel = 0,
+	ClipsDescendants = true,
+	Active = true,
+}, Gui)
+corner(Main, 16)
+stroke(Main, C.violet, 1.5)
+
+new("UIGradient", {
+	Color = ColorSequence.new{
+		ColorSequenceKeypoint.new(0, Color3.fromRGB(24, 20, 45)),
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(12, 14, 26)),
+	},
+	Rotation = 90,
+}, Main)
+
+--== ШАПКА ==--
+local Header = new("Frame", {
+	Size = UDim2.new(1, 0, 0, 52),
+	BackgroundColor3 = C.panel,
+	BorderSizePixel = 0,
+}, Main)
+corner(Header, 16)
+new("Frame", {
+	Size = UDim2.new(1, 0, 0, 16),
+	Position = UDim2.new(0, 0, 1, -16),
+	BackgroundColor3 = C.panel,
+	BorderSizePixel = 0,
+}, Header)
+
+new("TextLabel", {
+	Size = UDim2.new(0, 200, 1, 0),
+	Position = UDim2.new(0, 16, 0, 0),
+	BackgroundTransparency = 1,
+	Text = "⚡ LUAVERSE",
+	TextColor3 = C.text,
+	Font = Enum.Font.GothamBlack,
+	TextSize = 18,
+	TextXAlignment = Enum.TextXAlignment.Left,
+}, Header)
+
+new("TextLabel", {
+	Size = UDim2.new(0, 60, 0, 16),
+	Position = UDim2.new(0, 132, 0, 19),
+	BackgroundTransparency = 1,
+	Text = "MM2",
+	TextColor3 = C.cyan,
+	Font = Enum.Font.GothamBold,
+	TextSize = 12,
+	TextXAlignment = Enum.TextXAlignment.Left,
+}, Header)
+
+local MinBtn = new("TextButton", {
+	Size = UDim2.new(0, 28, 0, 28),
+	Position = UDim2.new(1, -66, 0, 12),
+	BackgroundColor3 = C.card,
+	Text = "–",
+	TextColor3 = C.muted,
+	Font = Enum.Font.GothamBold,
+	TextSize = 20,
+	AutoButtonColor = false,
+}, Header)
+corner(MinBtn, 8)
+
+local CloseBtn = new("TextButton", {
+	Size = UDim2.new(0, 28, 0, 28),
+	Position = UDim2.new(1, -34, 0, 12),
+	BackgroundColor3 = Color3.fromRGB(60, 26, 38),
+	Text = "✕",
+	TextColor3 = C.red,
+	Font = Enum.Font.GothamBold,
+	TextSize = 13,
+	AutoButtonColor = false,
+}, Header)
+corner(CloseBtn, 8)
+
+--== ПЕРЕТАСКИВАНИЕ (тач + мышь) ==--
+do
+	local dragging, dragStart, startPos = false, nil, nil
+	Header.InputBegan:Connect(function(i)
+		if i.UserInputType == Enum.UserInputType.Touch or i.UserInputType == Enum.UserInputType.MouseButton1 then
+			dragging, dragStart, startPos = true, i.Position, Main.Position
+		end
+	end)
+	UserInputService.InputChanged:Connect(function(i)
+		if dragging and (i.UserInputType == Enum.UserInputType.Touch or i.UserInputType == Enum.UserInputType.MouseMovement) then
+			local d = i.Position - dragStart
+			Main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + d.X, startPos.Y.Scale, startPos.Y.Offset + d.Y)
+		end
+	end)
+	UserInputService.InputEnded:Connect(function(i)
+		if i.UserInputType == Enum.UserInputType.Touch or i.UserInputType == Enum.UserInputType.MouseButton1 then
+			dragging = false
+		end
+	end)
+end
+
+--== ВКЛАДКИ ==--
+local TabBar = new("Frame", {
+	Size = UDim2.new(1, -20, 0, 34),
+	Position = UDim2.new(0, 10, 0, 58),
+	BackgroundColor3 = C.panel,
+	BorderSizePixel = 0,
+}, Main)
+corner(TabBar, 10)
+new("UIListLayout", {
+	FillDirection = Enum.FillDirection.Horizontal,
+	Padding = UDim.new(0, 4),
+	HorizontalAlignment = Enum.HorizontalAlignment.Center,
+	VerticalAlignment = Enum.VerticalAlignment.Center,
+}, TabBar)
+
+local Pages, Tabs = {}, {}
+
+local function makeTab(name, icon)
+	local btn = new("TextButton", {
+		Size = UDim2.new(0, 98, 1, -6),
+		BackgroundColor3 = C.card,
+		BackgroundTransparency = 1,
+		Text = icon .. " " .. name,
+		TextColor3 = C.muted,
+		Font = Enum.Font.GothamBold,
+		TextSize = 12,
+		AutoButtonColor = false,
+	}, TabBar)
+	corner(btn, 8)
+
+	local page = new("ScrollingFrame", {
+		Size = UDim2.new(1, -20, 1, -108),
+		Position = UDim2.new(0, 10, 0, 100),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		ScrollBarThickness = 3,
+		ScrollBarImageColor3 = C.violet,
+		CanvasSize = UDim2.new(0, 0, 0, 0),
+		AutomaticCanvasSize = Enum.AutomaticSize.Y,
+		Visible = false,
+	}, Main)
+	new("UIListLayout", {Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder}, page)
+	new("UIPadding", {PaddingBottom = UDim.new(0, 8)}, page)
+
+	Pages[name], Tabs[name] = page, btn
+
+	btn.MouseButton1Click:Connect(function()
+		for n, p in pairs(Pages) do
+			p.Visible = (n == name)
+			tween(Tabs[n], 0.2, {
+				BackgroundTransparency = (n == name) and 0 or 1,
+				TextColor3 = (n == name) and C.text or C.muted,
+			})
+		end
+	end)
+	return page
+end
+
+local PageMain = makeTab("Main", "🎮")
+local PageVisual = makeTab("Visual", "👁")
+local PageCombat = makeTab("Combat", "⚔")
+
+--== ЭЛЕМЕНТЫ UI ==--
+local function sectionLabel(parent, text)
+	new("TextLabel", {
+		Size = UDim2.new(1, 0, 0, 20),
+		BackgroundTransparency = 1,
+		Text = text,
+		TextColor3 = C.muted,
+		Font = Enum.Font.GothamBold,
+		TextSize = 11,
+		TextXAlignment = Enum.TextXAlignment.Left,
+	}, parent)
+end
+
+local function toggle(parent, title, desc, accent, callback)
+	local card = new("Frame", {
+		Size = UDim2.new(1, 0, 0, 56),
+		BackgroundColor3 = C.card,
+		BorderSizePixel = 0,
+	}, parent)
+	corner(card, 12)
+	local st = stroke(card, C.stroke, 1)
+
+	new("TextLabel", {
+		Size = UDim2.new(1, -80, 0, 20),
+		Position = UDim2.new(0, 14, 0, 9),
+		BackgroundTransparency = 1,
+		Text = title,
+		TextColor3 = C.text,
+		Font = Enum.Font.GothamBold,
+		TextSize = 14,
+		TextXAlignment = Enum.TextXAlignment.Left,
+	}, card)
+
+	new("TextLabel", {
+		Size = UDim2.new(1, -80, 0, 16),
+		Position = UDim2.new(0, 14, 0, 29),
+		BackgroundTransparency = 1,
+		Text = desc,
+		TextColor3 = C.muted,
+		Font = Enum.Font.Gotham,
+		TextSize = 11,
+		TextXAlignment = Enum.TextXAlignment.Left,
+	}, card)
+
+	local pill = new("Frame", {
+		Size = UDim2.new(0, 46, 0, 24),
+		Position = UDim2.new(1, -60, 0.5, -12),
+		BackgroundColor3 = Color3.fromRGB(45, 49, 72),
+		BorderSizePixel = 0,
+	}, card)
+	corner(pill, 12)
+
+	local knob = new("Frame", {
+		Size = UDim2.new(0, 18, 0, 18),
+		Position = UDim2.new(0, 3, 0.5, -9),
+		BackgroundColor3 = C.muted,
+		BorderSizePixel = 0,
+	}, pill)
+	corner(knob, 9)
+
+	local hit = new("TextButton", {
+		Size = UDim2.new(1, 0, 1, 0),
+		BackgroundTransparency = 1,
+		Text = "",
+	}, card)
+
+	local state = false
+	hit.MouseButton1Click:Connect(function()
+		state = not state
+		tween(pill, 0.2, {BackgroundColor3 = state and accent or Color3.fromRGB(45, 49, 72)})
+		tween(knob, 0.2, {
+			Position = state and UDim2.new(1, -21, 0.5, -9) or UDim2.new(0, 3, 0.5, -9),
+			BackgroundColor3 = state and Color3.new(1,1,1) or C.muted,
+		})
+		tween(st, 0.2, {Color = state and accent or C.stroke, Transparency = state and 0.1 or 0.4})
+		callback(state)
+	end)
+	return card
+end
+
+local function slider(parent, title, min, max, default, accent, callback)
+	local card = new("Frame", {
+		Size = UDim2.new(1, 0, 0, 62),
+		BackgroundColor3 = C.card,
+		BorderSizePixel = 0,
+	}, parent)
+	corner(card, 12)
+	stroke(card)
+
+	new("TextLabel", {
+		Size = UDim2.new(1, -70, 0, 20),
+		Position = UDim2.new(0, 14, 0, 8),
+		BackgroundTransparency = 1,
+		Text = title,
+		TextColor3 = C.text,
+		Font = Enum.Font.GothamBold,
+		TextSize = 13,
+		TextXAlignment = Enum.TextXAlignment.Left,
+	}, card)
+
+	local val = new("TextLabel", {
+		Size = UDim2.new(0, 50, 0, 20),
+		Position = UDim2.new(1, -64, 0, 8),
+		BackgroundTransparency = 1,
+		Text = tostring(default),
+		TextColor3 = accent,
+		Font = Enum.Font.GothamBold,
+		TextSize = 13,
+		TextXAlignment = Enum.TextXAlignment.Right,
+	}, card)
+
+	local track = new("Frame", {
+		Size = UDim2.new(1, -28, 0, 6),
+		Position = UDim2.new(0, 14, 0, 40),
+		BackgroundColor3 = Color3.fromRGB(45, 49, 72),
+		BorderSizePixel = 0,
+	}, card)
+	corner(track, 3)
+
+	local fill = new("Frame", {
+		Size = UDim2.new((default - min) / (max - min), 0, 1, 0),
+		BackgroundColor3 = accent,
+		BorderSizePixel = 0,
+	}, track)
+	corner(fill, 3)
+
+	local knob = new("Frame", {
+		Size = UDim2.new(0, 14, 0, 14),
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.new((default - min) / (max - min), 0, 0.5, 0),
+		BackgroundColor3 = Color3.new(1, 1, 1),
+		BorderSizePixel = 0,
+		ZIndex = 3,
+	}, track)
+	corner(knob, 7)
+
+	local hit = new("TextButton", {
+		Size = UDim2.new(1, 0, 0, 28),
+		Position = UDim2.new(0, 0, 0, -11),
+		BackgroundTransparency = 1,
+		Text = "",
+	}, track)
+
+	local sliding = false
+	local function setFromX(x)
+		local rel = math.clamp((x - track.AbsolutePosition.X) / track.AbsoluteSize.X, 0, 1)
+		local v = math.floor(min + (max - min) * rel + 0.5)
+		val.Text = tostring(v)
+		fill.Size = UDim2.new(rel, 0, 1, 0)
+		knob.Position = UDim2.new(rel, 0, 0.5, 0)
+		callback(v)
+	end
+
+	hit.InputBegan:Connect(function(i)
+		if i.UserInputType == Enum.UserInputType.Touch or i.UserInputType == Enum.UserInputType.MouseButton1 then
+			sliding = true
+			setFromX(i.Position.X)
+		end
+	end)
+	UserInputService.InputChanged:Connect(function(i)
+		if sliding and (i.UserInputType == Enum.UserInputType.Touch or i.UserInputType == Enum.UserInputType.MouseMovement) then
+			setFromX(i.Position.X)
+		end
+	end)
+	UserInputService.InputEnded:Connect(function(i)
+		if i.UserInputType == Enum.UserInputType.Touch or i.UserInputType == Enum.UserInputType.MouseButton1 then
+			sliding = false
+		end
+	end)
+	return card
+end
+
+--============================================
+--  ЛОГИКА
+--============================================
+
+local bv, bg, flyConn
 local espObjects = {}
 local shootConn
 
--- == GUI SYSTEM ==
-if LP.PlayerGui:FindFirstChild("LV_HUB") then LP.PlayerGui.LV_HUB:Destroy() end
-
-local Gui = Instance.new("ScreenGui")
-Gui.Name = "LV_HUB"
-Gui.ResetOnSpawn = false
-Gui.DisplayOrder = 9999
-Gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-Gui.Parent = LP.PlayerGui
-
--- Main Frame
-local Main = Instance.new("Frame")
-Main.Size = UDim2.new(0, 260, 0, 320)
-Main.Position = UDim2.new(0.5, -130, 0.5, -160)
-Main.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
-Main.BorderSizePixel = 2
-Main.BorderColor3 = Color3.fromRGB(100, 100, 255)
-Main.Active = true
-Main.Draggable = true
-Main.ClipsDescendants = true
-Main.Parent = Gui
-
--- Header
-local Header = Instance.new("Frame")
-Header.Size = UDim2.new(1, 0, 0, 35)
-Header.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
-Header.BorderSizePixel = 0
-Header.Parent = Main
-
-Instance.new("TextLabel", {
-    Size = UDim2.new(1, -70, 1, 0), Position = UDim2.new(0, 10, 0, 0),
-    BackgroundTransparency = 1, Text = "⚡ LUAVERSE", TextColor3 = Color3.white,
-    Font = Enum.Font.GothamBold, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left, Parent = Header
-})
-
--- Кнопки управления окном
-local function createWinBtn(text, pos, color, callback)
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0, 25, 0, 25)
-    btn.Position = pos
-    btn.BackgroundColor3 = color
-    btn.Text = text
-    btn.TextColor3 = Color3.white
-    btn.Font = Enum.Font.GothamBold
-    btn.TextSize = 14
-    btn.AutoButtonColor = false
-    btn.Parent = Header
-    btn.MouseButton1Click:Connect(callback)
-end
-
-createWinBtn("-", UDim2.new(1, -55, 0, 5), Color3.fromRGB(60,60,70), function()
-    if Main.Size.Y.Offset > 40 then
-        Main.Size = UDim2.new(0, 260, 0, 35) -- Свернуть
-    else
-        Main.Size = UDim2.new(0, 260, 0, 320) -- Развернуть
-    end
-end)
-
-createWinBtn("X", UDim2.new(1, -28, 0, 5), Color3.fromRGB(150,50,50), function()
-    Gui:Destroy()
-end)
-
--- Контейнер для контента
-local Content = Instance.new("Frame")
-Content.Size = UDim2.new(1, 0, 1, -35)
-Content.Position = UDim2.new(0, 0, 0, 35)
-Content.BackgroundTransparency = 1
-Content.Parent = Main
-
--- Вкладки
-local Tab1 = Instance.new("TextButton")
-Tab1.Size = UDim2.new(0.5, 0, 0, 25)
-Tab1.BackgroundColor3 = Color3.fromRGB(80, 80, 120)
-Tab1.Text = "Main"
-Tab1.TextColor3 = Color3.white
-Tab1.Font = Enum.Font.GothamBold
-Tab1.TextSize = 12
-Tab1.Parent = Content
-
-local Tab2 = Instance.new("TextButton")
-Tab2.Size = UDim2.new(0.5, 0, 0, 25)
-Tab2.Position = UDim2.new(0.5, 0, 0, 0)
-Tab2.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-Tab2.Text = "Combat"
-Tab2.TextColor3 = Color3.fromRGB(150,150,150)
-Tab2.Font = Enum.Font.GothamBold
-Tab2.TextSize = 12
-Tab2.Parent = Content
-
--- Страницы
-local Page1 = Instance.new("Frame")
-Page1.Size = UDim2.new(1, 0, 1, -25)
-Page1.Position = UDim2.new(0, 0, 0, 25)
-Page1.BackgroundTransparency = 1
-Page1.Visible = true
-Page1.Parent = Content
-
-local Page2 = Instance.new("Frame")
-Page2.Size = UDim2.new(1, 0, 1, -25)
-Page2.Position = UDim2.new(0, 0, 0, 25)
-Page2.BackgroundTransparency = 1
-Page2.Visible = false
-Page2.Parent = Content
-
--- Переключение вкладок
-Tab1.MouseButton1Click:Connect(function()
-    Page1.Visible = true; Page2.Visible = false
-    Tab1.BackgroundColor3 = Color3.fromRGB(80,80,120); Tab1.TextColor3 = Color3.white
-    Tab2.BackgroundColor3 = Color3.fromRGB(40,40,50); Tab2.TextColor3 = Color3.fromRGB(150,150,150)
-end)
-
-Tab2.MouseButton1Click:Connect(function()
-    Page1.Visible = false; Page2.Visible = true
-    Tab2.BackgroundColor3 = Color3.fromRGB(80,80,120); Tab2.TextColor3 = Color3.white
-    Tab1.BackgroundColor3 = Color3.fromRGB(40,40,50); Tab1.TextColor3 = Color3.fromRGB(150,150,150)
-end)
-
--- Функция создания кнопки-переключателя
-local yPos = 5
-local function addToggle(parent, text, callback)
-    local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(1, -10, 0, 30)
-    frame.Position = UDim2.new(0, 5, 0, yPos)
-    frame.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
-    frame.Parent = parent
-    yPos = yPos + 35
-
-    Instance.new("TextLabel", {
-        Size = UDim2.new(1, -40, 1, 0), Position = UDim2.new(0, 5, 0, 0),
-        BackgroundTransparency = 1, Text = text, TextColor3 = Color3.white,
-        Font = Enum.Font.Gotham, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left, Parent = frame
-    })
-
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0, 30, 0, 20)
-    btn.Position = UDim2.new(1, -35, 0.5, -10)
-    btn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-    btn.Text = ""
-    btn.Parent = frame
-
-    local state = false
-    btn.MouseButton1Click:Connect(function()
-        state = not state
-        btn.BackgroundColor3 = state and Color3.fromRGB(0, 200, 100) or Color3.fromRGB(60, 60, 60)
-        callback(state)
-    end)
-end
-
--- == ЗАПОЛНЕНИЕ ВКЛАДОК ==
-yPos = 5
-
--- Вкладка 1: Движение
-addToggle(Page1, "✈️ No-Clip Fly", function(v)
-    isFlying = v
-    if v then
-        bodyVelocity = Instance.new("BodyVelocity"); bodyVelocity.MaxForce = Vector3.new(1e5,1e5,1e5); bodyVelocity.Parent = RootPart
-        bodyGyro = Instance.new("BodyGyro"); bodyGyro.MaxTorque = Vector3.new(1e5,1e5,1e5); bodyGyro.P = 9000; bodyGyro.Parent = RootPart
-        Humanoid.PlatformStand = true
-        for _, p in pairs(Character:GetDescendants()) do if p:IsA("BasePart") and p.Name ~= "HumanoidRootPart" then p.CanCollide = false end end
-    else
-        if bodyVelocity then bodyVelocity:Destroy() end
-        if bodyGyro then bodyGyro:Destroy() end
-        Humanoid.PlatformStand = false
-        for _, p in pairs(Character:GetDescendants()) do if p:IsA("BasePart") then p.CanCollide = true end end
-    end
-end)
-
-yPos = 5
-
--- Вкладка 2: Бой и Визуал
-addToggle(Page2, "👁️ ESP All", function(v)
-    Settings.ESP_All = v
-    if not v then for _, o in pairs(espObjects) do o:Destroy() end; espObjects = {} end
-end)
-
-addToggle(Page2, "🔫 Auto Shoot", function(v)
-    Settings.AutoShoot = v
-end)
-
-addToggle(Page2, "💀 Kill All", function(v)
-    Settings.KillAll = v
-end)
-
--- == ЛОГИКА СКРИПТА ==
-
--- Полет
-RunService.RenderStepped:Connect(function()
-    if isFlying and bodyVelocity and RootPart then
-        local moveDir = Humanoid.MoveDirection
-        local camLook = Camera.CFrame.LookVector
-        if moveDir.Magnitude > 0.1 then
-            bodyVelocity.Velocity = camLook.Unit * Settings.FlySpeed * moveDir.Magnitude
-            bodyGyro.CFrame = CFrame.lookAt(RootPart.Position, RootPart.Position + camLook.Unit)
-        else
-            bodyVelocity.Velocity = Vector3.zero
+--== FLY (NO-CLIP) ==--
+local function stopFly()
+	if flyConn then flyConn:Disconnect() flyConn = nil end
+	if bv then bv:Destroy() bv = nil end
+	if bg then bg:Destroy() bg = nil end
+	local h = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
+	if h then 
+        h.PlatformStand = false 
+        -- Возвращаем коллизию
+        for _, part in pairs(LP.Character:GetDescendants()) do
+            if part:IsA("BasePart") then part.CanCollide = true end
         end
     end
-end)
+end
 
--- ESP
+local function startFly()
+	stopFly()
+	local char = LP.Character
+	if not char then return end
+	local hum = char:FindFirstChildOfClass("Humanoid")
+	local root = char:FindFirstChild("HumanoidRootPart")
+	if not hum or not root then return end
+
+	bv = new("BodyVelocity", {MaxForce = Vector3.new(1e5,1e5,1e5), Velocity = Vector3.zero}, root)
+	bg = new("BodyGyro", {MaxTorque = Vector3.new(1e5,1e5,1e5), P = 9000, CFrame = root.CFrame}, root)
+	hum.PlatformStand = true
+	
+	-- Включаем No-Clip
+	for _, part in pairs(char:GetDescendants()) do
+		if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then 
+			part.CanCollide = false 
+		end
+	end
+
+	flyConn = RunService.RenderStepped:Connect(function()
+		if not bv or not bv.Parent then return end
+		local cam = workspace.CurrentCamera
+		local move = hum.MoveDirection
+		local look = cam.CFrame.LookVector
+		
+		-- Умное управление: летим туда, куда смотрим
+		local fL = Vector3.new(look.X, 0, look.Z)
+		if fL.Magnitude > 0 then fL = fL.Unit end
+
+		local vel = fL * move.Magnitude * S.FlySpeed
+		vel = vel + Vector3.new(0, look.Y * S.FlySpeed, 0)
+		
+		bv.Velocity = vel
+		if fL.Magnitude > 0 then
+			bg.CFrame = CFrame.lookAt(root.Position, root.Position + fL)
+		end
+	end)
+end
+
+--== ESP ДЛЯ ВСЕХ ==--
+local function updateESP()
+	if not S.ESP_All then 
+		for _, o in pairs(espObjects) do if o then o:Destroy() end end
+		espObjects = {}
+		return 
+	end
+	
+	for _, plr in ipairs(Players:GetPlayers()) do
+		if plr ~= LP and plr.Character then
+			local root = plr.Character:FindFirstChild("HumanoidRootPart")
+			if root then
+				if not espObjects[plr] then
+					local hl = new("Highlight", {
+						FillTransparency = 0.6, 
+						OutlineTransparency = 0.2,
+						DepthMode = Enum.HighlightDepthMode.AlwaysOnTop,
+						Adornee = plr.Character
+					}, plr.Character)
+					espObjects[plr] = hl
+				end
+				
+				local hl = espObjects[plr]
+				-- Проверка оружия
+				local isMurderer = plr.Character:FindFirstChild("Knife") or (plr.Backpack and plr.Backpack:FindFirstChild("Knife"))
+				local isSheriff = plr.Character:FindFirstChild("Gun") or (plr.Backpack and plr.Backpack:FindFirstChild("Gun"))
+				
+				if isMurderer then
+					hl.FillColor = C.red
+				elseif isSheriff then
+					hl.FillColor = Color3.fromRGB(60, 150, 255)
+				else
+					hl.FillColor = C.green -- Мирные зеленые
+				end
+			end
+		end
+	end
+end
+
 task.spawn(function()
-    while wait(0.5) do
-        if Settings.ESP_All then
-            for _, plr in pairs(Players:GetPlayers()) do
-                if plr ~= LP and plr.Character then
-                    local root = plr.Character:FindFirstChild("HumanoidRootPart")
-                    if root then
-                        if not espObjects[plr] then
-                            local hl = Instance.new("Highlight")
-                            hl.FillTransparency = 0.7; hl.OutlineTransparency = 0.2
-                            hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-                            hl.Adornee = plr.Character; hl.Parent = plr.Character
-                            espObjects[plr] = hl
-                        end
-                        local hl = espObjects[plr]
-                        local isM = plr.Character:FindFirstChild("Knife") or (plr.Backpack and plr.Backpack:FindFirstChild("Knife"))
-                        local isS = plr.Character:FindFirstChild("Gun") or (plr.Backpack and plr.Backpack:FindFirstChild("Gun"))
-                        if isM then hl.FillColor = Color3.fromRGB(255, 50, 50)
-                        elseif isS then hl.FillColor = Color3.fromRGB(50, 150, 255)
-                        else hl.FillColor = Color3.fromRGB(50, 255, 100) end
-                    end
-                end
-            end
-        end
-    end
+	while Gui.Parent do
+		pcall(updateESP)
+		task.wait(0.5)
+	end
 end)
 
--- Auto Shoot & Kill All
+--== AUTO SHOOT & KILL ALL ==--
 shootConn = RunService.RenderStepped:Connect(function()
-    if Settings.AutoShoot or Settings.KillAll then
-        local gun = Character:FindFirstChild("Gun")
-        if gun and gun:IsA("Tool") then
-            local nearest, dist = nil, math.huge
-            for _, plr in pairs(Players:GetPlayers()) do
-                if plr ~= LP and plr.Character then
-                    local hasK = plr.Character:FindFirstChild("Knife") or (plr.Backpack and plr.Backpack:FindFirstChild("Knife"))
-                    if hasK then
-                        local tRoot = plr.Character:FindFirstChild("HumanoidRootPart")
-                        if tRoot then
-                            local d = (RootPart.Position - tRoot.Position).Magnitude
-                            if d < dist and d < 50 then dist = d; nearest = plr end
-                        end
-                    end
-                end
-            end
-            if nearest then
-                local tRoot = nearest.Character:FindFirstChild("HumanoidRootPart")
-                Camera.CFrame = CFrame.lookAt(RootPart.Position, tRoot.Position)
-                pcall(function() gun:Activate() end)
-                wait(0.4)
-            end
-        end
-    end
+	if S.AutoShoot or S.KillAll then
+		local char = LP.Character
+		local root = char and char:FindFirstChild("HumanoidRootPart")
+		local gun = char and char:FindFirstChild("Gun")
+		
+		if root and gun and gun:IsA("Tool") then
+			local nearest, dist = nil, math.huge
+			for _, plr in pairs(Players:GetPlayers()) do
+				if plr ~= LP and plr.Character then
+					-- Ищем убийцу для автошота или любого игрока для Kill All
+					local isTarget = false
+					if S.AutoShoot then
+						isTarget = plr.Character:FindFirstChild("Knife") or (plr.Backpack and plr.Backpack:FindFirstChild("Knife"))
+					elseif S.KillAll then
+						isTarget = true
+					end
+					
+					if isTarget then
+						local tRoot = plr.Character:FindFirstChild("HumanoidRootPart")
+						if tRoot then
+							local d = (root.Position - tRoot.Position).Magnitude
+							if d < dist and d < 50 then
+								dist = d
+								nearest = plr
+							end
+						end
+					end
+				end
+			end
+			
+			if nearest then
+				local tRoot = nearest.Character:FindFirstChild("HumanoidRootPart")
+				Camera.CFrame = CFrame.lookAt(root.Position, tRoot.Position)
+				pcall(function() gun:Activate() end)
+				task.wait(0.4)
+			end
+		end
+	end
 end)
 
-print("✅ LUAVERSE MM2 Loaded")
+--== РЕСПАВН ==--
+LP.CharacterAdded:Connect(function()
+	task.wait(1)
+	bv, bg = nil, nil
+	if S.Fly then startFly() end
+end)
+
+--============================================
+--  НАПОЛНЕНИЕ ВКЛАДОК
+--============================================
+
+sectionLabel(PageMain, "  ДВИЖЕНИЕ")
+toggle(PageMain, "✈️ No-Clip Fly", "Летай сквозь стены", C.cyan, function(v)
+	S.Fly = v
+	if v then startFly() else stopFly() end
+end)
+slider(PageMain, "Скорость полёта", 20, 200, S.FlySpeed, C.cyan, function(v) S.FlySpeed = v end)
+
+sectionLabel(PageVisual, "  ВИЗУАЛ")
+toggle(PageVisual, "👁 ESP All Players", "Подсветка всех (M/S/Мирные)", C.violet, function(v)
+	S.ESP_All = v
+end)
+
+sectionLabel(PageCombat, "  БОЙ")
+toggle(PageCombat, "🔫 Auto Shoot", "Авто-стрельба по убийце", C.red, function(v)
+	S.AutoShoot = v
+end)
+toggle(PageCombat, "💀 Kill All", "Убивать всех подряд", C.amber, function(v)
+	S.KillAll = v
+end)
+
+--== ФУТЕР ==--
+local Footer = new("TextLabel", {
+	Size = UDim2.new(1, 0, 0, 22),
+	Position = UDim2.new(0, 0, 1, -22),
+	BackgroundTransparency = 1,
+	Text = "LUAVERSE · v3.0",
+	TextColor3 = C.muted,
+	Font = Enum.Font.Gotham,
+	TextSize = 10,
+}, Main)
+
+--== СВОРАЧИВАНИЕ ==--
+local minimized = false
+MinBtn.MouseButton1Click:Connect(function()
+	minimized = not minimized
+	tween(Main, 0.25, {Size = minimized and UDim2.new(0, 330, 0, 52) or UDim2.new(0, 330, 0, 430)})
+	MinBtn.Text = minimized and "+" or "–"
+end)
+
+--== ЗАКРЫТИЕ ==--
+CloseBtn.MouseButton1Click:Connect(function()
+	S.Fly = false; S.ESP_All = false; S.AutoShoot = false; S.KillAll = false
+	stopFly()
+	for _, o in pairs(espObjects) do if o then o:Destroy() end end
+	Gui:Destroy()
+end)
+
+--== ОТКРЫТИЕ: АНИМАЦИЯ + ПЕРВАЯ ВКЛАДКА ==--
+Main.Size = UDim2.new(0, 330, 0, 0)
+tween(Main, 0.3, {Size = UDim2.new(0, 330, 0, 430)})
+Tabs["Main"].BackgroundTransparency = 0
+Tabs["Main"].TextColor3 = C.text
+PageMain.Visible = true
+
+print("⚡ LUAVERSE HUB v3.0 Loaded")
