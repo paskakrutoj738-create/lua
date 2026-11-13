@@ -1,16 +1,15 @@
--- ⚡ LUAVERSE MM2 | Ultimate Hub
+-- ⚡ LUAVERSE MM2 HUB | Delta Stable Edition
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local LP = Players.LocalPlayer
 
--- Ждем загрузки
+-- Ждем персонажа
 local Character = LP.Character or LP.CharacterAdded:Wait()
 local Humanoid = Character:WaitForChild("Humanoid")
 local RootPart = Character:WaitForChild("HumanoidRootPart")
 local Camera = workspace.CurrentCamera
 
--- Настройки
 local Settings = {
     FlySpeed = 80,
     AutoShoot = false,
@@ -33,114 +32,145 @@ Gui.Parent = LP.PlayerGui
 
 -- Main Frame
 local Main = Instance.new("Frame")
-Main.Size = UDim2.new(0, 280, 0, 350)
-Main.Position = UDim2.new(0.5, -140, 0.5, -175)
-Main.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
-Main.BorderSizePixel = 0
+Main.Size = UDim2.new(0, 260, 0, 320)
+Main.Position = UDim2.new(0.5, -130, 0.5, -160)
+Main.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+Main.BorderSizePixel = 2
+Main.BorderColor3 = Color3.fromRGB(80, 80, 150)
 Main.Active = true
-Main.Draggable = true -- Встроенное перетаскивание
+Main.Draggable = true -- ТАСКАТЬ ПАЛЬЦЕМ
 Main.Parent = Gui
-Instance.new("UICorner", {CornerRadius = UDim.new(0, 12), Parent = Main})
-Instance.new("UIStroke", {Color = Color3.fromRGB(100, 100, 255), Thickness = 1, Parent = Main})
 
--- Header
+-- Header (Шапка)
 local Header = Instance.new("Frame")
-Header.Size = UDim2.new(1, 0, 0, 40)
-Header.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
+Header.Size = UDim2.new(1, 0, 0, 35)
+Header.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
 Header.BorderSizePixel = 0
 Header.Parent = Main
-Instance.new("UICorner", {CornerRadius = UDim.new(0, 12), Parent = Header})
-Instance.new("Frame", {Size = UDim2.new(1,0,0,12), Position = UDim2.new(0,0,1,-12), BackgroundColor3 = Color3.fromRGB(30,30,45), BorderSizePixel=0, Parent = Header})
 
 Instance.new("TextLabel", {
-    Size = UDim2.new(1,0,1,0), BackgroundTransparency = 1,
-    Text = "⚡ LUAVERSE MM2", TextColor3 = Color3.white,
-    Font = Enum.Font.GothamBold, TextSize = 16, Parent = Header
+    Size = UDim2.new(1, -70, 1, 0),
+    Position = UDim2.new(0, 10, 0, 0),
+    BackgroundTransparency = 1,
+    Text = "⚡ LUAVERSE",
+    TextColor3 = Color3.white,
+    Font = Enum.Font.GothamBold,
+    TextSize = 14,
+    TextXAlignment = Enum.TextXAlignment.Left,
+    Parent = Header
 })
 
--- Tabs
-local TabFrame = Instance.new("Frame")
-TabFrame.Size = UDim2.new(1, -10, 0, 30)
-TabFrame.Position = UDim2.new(0, 5, 0, 45)
-TabFrame.BackgroundTransparency = 1
-TabFrame.Parent = Main
+-- Кнопка Минус (Свернуть)
+local MinBtn = Instance.new("TextButton")
+MinBtn.Size = UDim2.new(0, 25, 0, 25)
+MinBtn.Position = UDim2.new(1, -55, 0, 5)
+MinBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
+MinBtn.Text = "-"
+MinBtn.TextColor3 = Color3.white
+MinBtn.Font = Enum.Font.GothamBold
+MinBtn.TextSize = 18
+MinBtn.AutoButtonColor = false
+MinBtn.Parent = Header
 
-local ContentFrame = Instance.new("ScrollingFrame")
-ContentFrame.Size = UDim2.new(1, -10, 1, -90)
-ContentFrame.Position = UDim2.new(0, 5, 0, 80)
-ContentFrame.BackgroundTransparency = 1
-ContentFrame.BorderSizePixel = 0
-ContentFrame.ScrollBarThickness = 4
-ContentFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
-ContentFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
-ContentFrame.Parent = Main
-Instance.new("UIListLayout", {Padding = UDim.new(0, 5), SortOrder = Enum.SortOrder.LayoutOrder, Parent = ContentFrame})
+-- Кнопка Крестик (Закрыть)
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Size = UDim2.new(0, 25, 0, 25)
+CloseBtn.Position = UDim2.new(1, -28, 0, 5)
+CloseBtn.BackgroundColor3 = Color3.fromRGB(150, 50, 50)
+CloseBtn.Text = "X"
+CloseBtn.TextColor3 = Color3.white
+CloseBtn.Font = Enum.Font.GothamBold
+CloseBtn.TextSize = 12
+CloseBtn.AutoButtonColor = false
+CloseBtn.Parent = Header
 
+-- Вкладки
+local TabBar = Instance.new("Frame")
+TabBar.Size = UDim2.new(1, 0, 0, 30)
+TabBar.Position = UDim2.new(0, 0, 0, 35)
+TabBar.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+TabBar.BorderSizePixel = 0
+TabBar.Parent = Main
+
+local Content = Instance.new("ScrollingFrame")
+Content.Size = UDim2.new(1, -10, 1, -75)
+Content.Position = UDim2.new(0, 5, 0, 70)
+Content.BackgroundTransparency = 1
+Content.BorderSizePixel = 0
+Content.ScrollBarThickness = 3
+Content.CanvasSize = UDim2.new(0, 0, 0, 0)
+Content.AutomaticCanvasSize = Enum.AutomaticSize.Y
+Content.Parent = Main
+Instance.new("UIListLayout", {Padding = UDim.new(0, 5), SortOrder = Enum.SortOrder.LayoutOrder, Parent = Content})
+
+-- Логика вкладок
+local Pages = {}
 local function createTab(name, xPos)
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0.5, -2, 1, 0)
+    btn.Size = UDim2.new(0.5, 0, 1, 0)
     btn.Position = UDim2.new(xPos, 0, 0, 0)
-    btn.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+    btn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
     btn.Text = name
-    btn.TextColor3 = Color3.white
+    btn.TextColor3 = Color3.fromRGB(150, 150, 150)
     btn.Font = Enum.Font.GothamBold
-    btn.TextSize = 12
+    btn.TextSize = 11
     btn.AutoButtonColor = false
-    btn.Parent = TabFrame
-    Instance.new("UICorner", {CornerRadius = UDim.new(0, 6), Parent = btn})
+    btn.Parent = TabBar
     
     local page = Instance.new("Frame")
     page.Size = UDim2.new(1, 0, 1, 0)
     page.BackgroundTransparency = 1
     page.Visible = (xPos == 0)
-    page.Parent = ContentFrame
+    page.Parent = Content
     Instance.new("UIListLayout", {Padding = UDim.new(0, 5), SortOrder = Enum.SortOrder.LayoutOrder, Parent = page})
-
+    
+    Pages[name] = {Btn = btn, Page = page}
+    
     btn.MouseButton1Click:Connect(function()
-        for _, child in pairs(TabFrame:GetChildren()) do
-            if child:IsA("TextButton") then child.BackgroundColor3 = Color3.fromRGB(40,40,55) end
-        end
-        btn.BackgroundColor3 = Color3.fromRGB(80, 80, 150)
-        for _, p in pairs(ContentFrame:GetChildren()) do
-            if p:IsA("Frame") then p.Visible = false end
+        for _, v in pairs(Pages) do
+            v.Page.Visible = false
+            v.Btn.TextColor3 = Color3.fromRGB(150, 150, 150)
+            v.Btn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
         end
         page.Visible = true
+        btn.TextColor3 = Color3.white
+        btn.BackgroundColor3 = Color3.fromRGB(80, 80, 120)
     end)
     
-    if xPos == 0 then btn.BackgroundColor3 = Color3.fromRGB(80, 80, 150) end
+    if xPos == 0 then 
+        btn.TextColor3 = Color3.white
+        btn.BackgroundColor3 = Color3.fromRGB(80, 80, 120)
+    end
     return page
 end
 
-local Page1 = createTab("Movement", 0)
-local Page2 = createTab("Visual", 0.5)
-local Page3 = createTab("Combat", 1) -- Исправлено для 3 вкладок, но пока оставим 2 для простоты, добавим в Page2
+local PageMove = createTab("Move", 0)
+local PageVis = createTab("Visual", 0.5)
 
--- UI Helpers
+-- Элементы управления (Toggle)
 local function addToggle(parent, text, callback)
     local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(1, 0, 0, 30)
-    frame.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
+    frame.Size = UDim2.new(1, 0, 0, 28)
+    frame.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
     frame.Parent = parent
-    Instance.new("UICorner", {CornerRadius = UDim.new(0, 6), Parent = frame})
     
     local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(1, -40, 1, 0)
+    label.Size = UDim2.new(1, -35, 1, 0)
     label.Position = UDim2.new(0, 5, 0, 0)
     label.BackgroundTransparency = 1
     label.Text = text
     label.TextColor3 = Color3.white
     label.Font = Enum.Font.Gotham
-    label.TextSize = 12
+    label.TextSize = 11
     label.TextXAlignment = Enum.TextXAlignment.Left
     label.Parent = frame
     
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0, 30, 0, 20)
-    btn.Position = UDim2.new(1, -35, 0.5, -10)
+    btn.Size = UDim2.new(0, 25, 0, 18)
+    btn.Position = UDim2.new(1, -30, 0.5, -9)
     btn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
     btn.Text = ""
     btn.Parent = frame
-    Instance.new("UICorner", {CornerRadius = UDim.new(0, 4), Parent = btn})
     
     local state = false
     btn.MouseButton1Click:Connect(function()
@@ -150,11 +180,12 @@ local function addToggle(parent, text, callback)
     end)
 end
 
--- == MOVEMENT ==
-addToggle(Page1, "✈️ No-Clip Fly", function(v)
+-- == ФУНКЦИИ ==
+
+-- 1. FLY + NO-CLIP
+addToggle(PageMove, "✈️ No-Clip Fly", function(v)
     isFlying = v
     if v then
-        -- Start Fly Logic
         bodyVelocity = Instance.new("BodyVelocity")
         bodyVelocity.MaxForce = Vector3.new(1e5,1e5,1e5)
         bodyVelocity.Parent = RootPart
@@ -169,7 +200,6 @@ addToggle(Page1, "✈️ No-Clip Fly", function(v)
             if p:IsA("BasePart") and p.Name ~= "HumanoidRootPart" then p.CanCollide = false end
         end
     else
-        -- Stop Fly Logic
         if bodyVelocity then bodyVelocity:Destroy() end
         if bodyGyro then bodyGyro:Destroy() end
         Humanoid.PlatformStand = false
@@ -179,8 +209,22 @@ addToggle(Page1, "✈️ No-Clip Fly", function(v)
     end
 end)
 
--- == VISUAL (ESP FOR ALL) ==
-addToggle(Page2, "👁️ ESP All Players", function(v)
+-- Полет логика
+RunService.RenderStepped:Connect(function()
+    if isFlying and bodyVelocity and RootPart then
+        local moveDir = Humanoid.MoveDirection
+        local camLook = Camera.CFrame.LookVector
+        if moveDir.Magnitude > 0.1 then
+            bodyVelocity.Velocity = camLook.Unit * Settings.FlySpeed * moveDir.Magnitude
+            bodyGyro.CFrame = CFrame.lookAt(RootPart.Position, RootPart.Position + camLook.Unit)
+        else
+            bodyVelocity.Velocity = Vector3.zero
+        end
+    end
+end)
+
+-- 2. ESP ALL
+addToggle(PageVis, "👁️ ESP All Players", function(v)
     Settings.ESP_All = v
     if not v then
         for _, obj in pairs(espObjects) do obj:Destroy() end
@@ -188,42 +232,39 @@ addToggle(Page2, "👁️ ESP All Players", function(v)
     end
 end)
 
-local function updateESP()
-    if not Settings.ESP_All then return end
-    
-    for _, plr in pairs(Players:GetPlayers()) do
-        if plr ~= LP and plr.Character then
-            local root = plr.Character:FindFirstChild("HumanoidRootPart")
-            if root then
-                if not espObjects[plr] then
-                    local hl = Instance.new("Highlight")
-                    hl.FillTransparency = 0.7
-                    hl.OutlineTransparency = 0.2
-                    hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-                    hl.Adornee = plr.Character
-                    hl.Parent = plr.Character
-                    espObjects[plr] = hl
-                end
-                
-                local hl = espObjects[plr]
-                local isMurderer = plr.Character:FindFirstChild("Knife") or (plr.Backpack and plr.Backpack:FindFirstChild("Knife"))
-                local isSheriff = plr.Character:FindFirstChild("Gun") or (plr.Backpack and plr.Backpack:FindFirstChild("Gun"))
-                
-                if isMurderer then
-                    hl.FillColor = Color3.fromRGB(255, 50, 50) -- Red
-                elseif isSheriff then
-                    hl.FillColor = Color3.fromRGB(50, 150, 255) -- Blue
-                else
-                    hl.FillColor = Color3.fromRGB(50, 255, 100) -- Green (Innocent)
+task.spawn(function()
+    while wait(0.5) do
+        if Settings.ESP_All then
+            for _, plr in pairs(Players:GetPlayers()) do
+                if plr ~= LP and plr.Character then
+                    local root = plr.Character:FindFirstChild("HumanoidRootPart")
+                    if root then
+                        if not espObjects[plr] then
+                            local hl = Instance.new("Highlight")
+                            hl.FillTransparency = 0.7
+                            hl.OutlineTransparency = 0.2
+                            hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+                            hl.Adornee = plr.Character
+                            hl.Parent = plr.Character
+                            espObjects[plr] = hl
+                        end
+                        
+                        local hl = espObjects[plr]
+                        local isMurderer = plr.Character:FindFirstChild("Knife") or (plr.Backpack and plr.Backpack:FindFirstChild("Knife"))
+                        local isSheriff = plr.Character:FindFirstChild("Gun") or (plr.Backpack and plr.Backpack:FindFirstChild("Gun"))
+                        
+                        if isMurderer then hl.FillColor = Color3.fromRGB(255, 50, 50)
+                        elseif isSheriff then hl.FillColor = Color3.fromRGB(50, 150, 255)
+                        else hl.FillColor = Color3.fromRGB(50, 255, 100) end
+                    end
                 end
             end
         end
     end
-end
-task.spawn(function() while wait(0.5) do pcall(updateESP) end end)
+end)
 
--- == COMBAT (AUTO SHOOT) ==
-addToggle(Page3, "🔫 Auto Shoot (Sheriff)", function(v)
+-- 3. AUTO SHOOT
+addToggle(PageVis, "🔫 Auto Shoot", function(v)
     Settings.AutoShoot = v
     if not v and shootConn then shootConn:Disconnect() end
 end)
@@ -232,7 +273,6 @@ shootConn = RunService.RenderStepped:Connect(function()
     if Settings.AutoShoot then
         local gun = Character:FindFirstChild("Gun")
         if gun and gun:IsA("Tool") then
-            -- Find nearest Murderer
             local nearestPlr, nearestDist = nil, math.huge
             for _, plr in pairs(Players:GetPlayers()) do
                 if plr ~= LP and plr.Character then
@@ -241,7 +281,7 @@ shootConn = RunService.RenderStepped:Connect(function()
                         local targetRoot = plr.Character:FindFirstChild("HumanoidRootPart")
                         if targetRoot then
                             local dist = (RootPart.Position - targetRoot.Position).Magnitude
-                            if dist < nearestDist and dist < 50 then -- Range 50 studs
+                            if dist < nearestDist and dist < 50 then
                                 nearestDist = dist
                                 nearestPlr = plr
                             end
@@ -251,18 +291,27 @@ shootConn = RunService.RenderStepped:Connect(function()
             end
             
             if nearestPlr then
-                -- Aim at murderer
                 local targetRoot = nearestPlr.Character:FindFirstChild("HumanoidRootPart")
                 Camera.CFrame = CFrame.lookAt(RootPart.Position, targetRoot.Position)
-                
-                -- Shoot
-                pcall(function()
-                    gun:Activate()
-                    wait(0.4) -- Fire rate
-                end)
+                pcall(function() gun:Activate() end)
+                wait(0.4)
             end
         end
     end
+end)
+
+-- Управление кнопками окна
+MinBtn.MouseButton1Click:Connect(function()
+    Content.Visible = not Content.Visible
+    TabBar.Visible = not TabBar.Visible
+    Main.Size = Content.Visible and UDim2.new(0, 260, 0, 320) or UDim2.new(0, 260, 0, 35)
+    MinBtn.Text = Content.Visible and "-" or "+"
+end)
+
+CloseBtn.MouseButton1Click:Connect(function()
+    isFlying = false
+    if bodyVelocity then bodyVelocity:Destroy() end
+    Gui:Destroy()
 end)
 
 print("✅ LUAVERSE MM2 Loaded")
